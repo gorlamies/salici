@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Game {
+  id Int @id @default(autoincrement())
+  running Boolean @default(true)
+  initialFen String
+  currentFen String
+  result String?
+  createdAt DateTime @default(now())
+  finishedAt DateTime?
+  moves Move[]
+}
+
+model Move {
+  id Int @id @default(autoincrement())
+  from String
+  to String
+  promotion String?
+  moveNumber Int
+  san String
+  uci String
+  fenAfter String
+  createdAt DateTime @default(now())
+  gameId Int
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@unique([gameId, moveNumber])
+}

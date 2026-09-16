@@ -17,8 +17,6 @@
 
     // Other Outputs
     "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
@@ -43,5 +41,6 @@
 
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-  }
+  },
+  "include": ["src/**/*"]
 }
