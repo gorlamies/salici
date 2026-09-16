@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --legacy-watch --exec \"ts-node --transpile-only\" src/main.ts",
-    "build": "tsc",
-    "start": "node dist/main.js"
+  "dev": "prisma migrate deploy && nodemon --legacy-watch --exec \"ts-node --transpile-only\" src/main.ts",
+  "build": "tsc",
+  "start": "node dist/main.js"
   },
   "keywords": [],
   "author": "",
