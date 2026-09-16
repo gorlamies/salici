@@ -1,15 +1,40 @@
-import { Box, Button, Fade, Stack, FormControl, FormControlLabel, Radio, RadioGroup } from "@mui/material";
+import { Box, Button, Fade, Stack } from "@mui/material";
 import { useState } from "react";
-//import { useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import type { MenuState } from "../types/menu";
+import { createGame } from "../api/games"
+import { io } from "socket.io-client";
+
+
+const socket = io("http://localhost:3000", {
+  autoConnect: false,
+});
 
 function HomePage() {
 
   const [menuState, setMenuState] = useState<MenuState>("main")
   const [time, setTime] = useState("")
-  //const navigate = useNavigate();
+  const navigate = useNavigate();
 
+  async function handleNewGameCration() {
+    try {
+      const data = await createGame()
+      socket.on("connect", () => {
+        console.log("CONNECTED:", socket.id);
+      });
 
+      socket.on("connect_error", (error) => {
+        console.error("SOCKET ERROR:", error.message);
+        console.error(error);
+      });
+
+      socket.connect();
+    }
+    catch (error) {
+      console.error("Could not create new game:", error);
+    }
+
+  }
 
   return (
     <Box
@@ -62,7 +87,7 @@ function HomePage() {
               3 | 2
             </Button>
           </Stack>
-          <Button onClick={() => setMenuState("main")} variant="contained"> Create Game</Button>
+          <Button onClick={handleNewGameCration} variant="contained"> Create Game</Button>
         </Stack>
       </Fade>
 
@@ -73,11 +98,3 @@ function HomePage() {
   )
 }
 export default HomePage
-
-
-/*
-       <Button
-        variant="contained"
-        onClick={() => navigate("/game")}> New Game 
-      </Button>
- */

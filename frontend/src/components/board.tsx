@@ -1,11 +1,11 @@
 import { Box } from "@mui/material";
 import Square from "./Square"
 import type { SquareName, Position, FenPiece, Color } from "../types/chess";
-import { fetchInitialFen } from "../api/games";
 import { useState, useEffect } from "react";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const ranks = [8, 7, 6, 5, 4, 3, 2, 1] as const;
+const fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 const pieceImages: Record<FenPiece, string> = {
   p: "/pieces/PawnBlack.svg",
@@ -35,12 +35,7 @@ function Board({ color }: BoardProps) {
 
     // function definition
     async function loadPosition() {
-      try {
-        const fen = await fetchInitialFen();
-        SetPosition(parseFen(fen));
-      } catch (error) {
-        console.error("Could not load the position:", error);
-      }
+      SetPosition(parseFen(fen));
     }
 
     // function call

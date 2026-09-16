@@ -2,8 +2,13 @@ import { MessageBody, SubscribeMessage, WebSocketGateway } from "@nestjs/websock
 import { GamesService } from "./games.service";
 import { ChessMoveInput } from "../chess/chess.types";
 
-@WebSocketGateway()
+@WebSocketGateway({
+    cors: {
+        origin: "http://localhost:5173",
+    },
+})
 export class GamesGateway {
+
     constructor(private readonly gameService: GamesService) { }
 
 
