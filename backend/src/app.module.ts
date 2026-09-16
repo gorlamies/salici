@@ -1,11 +1,12 @@
 import { Module } from "@nestjs/common";
 import { HealthModule } from "./health/health.module";
+import { DatabaseModule } from "./database/database.module";
 import { GameModule } from "./game/game.module";
 import { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { LoggerMiddleware } from "./common/middleware/logger.middleware";
 
 @Module({
-  imports: [HealthModule, GameModule],
+  imports: [HealthModule, GameModule, DatabaseModule],
   controllers: [],
   providers: [],
 })

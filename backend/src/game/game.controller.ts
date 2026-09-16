@@ -1,12 +1,17 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Post } from "@nestjs/common";
 import { GameService } from "./game.service";
 
 @Controller("game")
 export class GameController {
   constructor(private readonly gameService: GameService) {}
 
+  @Post()
+  createGame() {
+    return this.gameService.createGame();
+  }
+
   @Get()
-  getGame() {
-    return { fen: this.gameService.getRandomFen() };
+  getGames() {
+    return this.gameService.getGames();
   }
 }
