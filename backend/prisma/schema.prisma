@@ -35,3 +35,9 @@ model Move {
 
   @@unique([gameId, moveNumber])
 }
+
+model User {
+  username      String @id
+  email         String @unique
+  passwordhash  String
+}
