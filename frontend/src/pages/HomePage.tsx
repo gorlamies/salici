@@ -54,7 +54,7 @@ function HomePage() {
 
           }}>
           <Button onClick={() => setMenuState("createGame")} variant="contained"> new game</Button>
-          <Button onClick={() => setMenuState("createGame")} variant="contained"> login</Button>
+          <Button onClick={() => navigate("/auth")} variant="contained"> login</Button>
         </Stack>
       </Fade>
 
