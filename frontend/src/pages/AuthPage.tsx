@@ -2,11 +2,15 @@
 import { Box, Button, Stack, Typography, TextField } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { signup, login } from "../api/auth"
+import type { LoginDto, SignupDto } from "../api/auth";
+import { useAuth } from "../context/AuthContext";
 
 type AuthMode = "login" | "signup"
 
 function AuthPage() {
     const navigate = useNavigate()
+    const { setAccessToken } = useAuth();
 
     const [mode, setMode] = useState<AuthMode>("login");
 
@@ -16,12 +20,46 @@ function AuthPage() {
 
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+
+    async function handleFormSubmit(event: React.SubmitEvent<HTMLFormElement>) {
+        event.preventDefault()
+
+        setError(null);
+        setLoading(true);
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        try {
+            if (mode === "login") {
+                const dto: LoginDto = { username, password };
+                const data = await login(dto);
+                setAccessToken(data.accessToken)
+
+            }
+            else {
+                const dto: SignupDto = { username, email, password }
+                await signup(dto)
+            }
+            navigate("/");
+        }
+        catch (err) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Something went wrong");
+            }
+        }
+        finally { setLoading(false) }
+
+
+
+        return
+    }
     return (
 
 
         <Box
             component="form"
-            onSubmit={() => { }}
+            onSubmit={handleFormSubmit}
             sx={{
                 width: "100%",
                 maxWidth: 400,
