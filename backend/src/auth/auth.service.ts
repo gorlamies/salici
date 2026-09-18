@@ -3,10 +3,12 @@ import { PrismaService } from "../database/prisma.service";
 import * as argon2 from 'argon2';
 import { SignupDto } from "./dto/signup.dto";
 import { LoginDto } from "./dto/login.dto";
+import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class AuthService {
-    constructor(private readonly prismaService: PrismaService) { }
+    constructor(private readonly prismaService: PrismaService,
+        private readonly jwtService: JwtService) { }
 
     async signup(dto: SignupDto) {
         try {
@@ -24,7 +26,6 @@ export class AuthService {
     }
 
     async login(dto: LoginDto) {
-
         const user = await this.prismaService.user.findUnique({
             where: {
                 username: dto.username
@@ -32,6 +33,7 @@ export class AuthService {
         })
 
         if (!user) {
+            console.log("error here")
             throw new UnauthorizedException('Invalid username or password');
         }
 
@@ -41,13 +43,22 @@ export class AuthService {
         );
 
         if (!passwordMatches) {
+            console.log("error here")
             throw new UnauthorizedException('Invalid username or password');
         }
 
 
+        const accessToken = await this.jwtService.signAsync({
+            sub: dto.username,
+        });
+
+        return {
+            accessToken,
+        };
+
+
     }
     /*
-        async login() { }
         async refresh() { }
     */
 

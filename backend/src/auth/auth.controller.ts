@@ -19,7 +19,7 @@ export class AuthController {
     @Post("login")
     async login(
         @Body() body: LoginDto
-    ) { await this.authService.login(body) }
+    ) { return this.authService.login(body) }
     /*
         @Post()
         refresh() { }
