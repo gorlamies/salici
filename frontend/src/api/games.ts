@@ -1,9 +1,19 @@
-export async function createGame(): Promise<string> {
-    const response = await fetch("http://localhost:3000/games", { method: "POST" });
+export type Game = {
+  id: number;
+  running: boolean;
+  initialFen: string;
+  currentFen: string;
+  result: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+};
 
-    if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-    }
-    const data = await response.json();
-    return data;
+export async function createGame(): Promise<Game> {
+  const response = await fetch("http://localhost:3000/games", { method: "POST" });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json();
 }

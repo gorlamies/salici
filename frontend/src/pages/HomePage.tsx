@@ -16,19 +16,10 @@ function HomePage() {
   const [time, setTime] = useState("")
   const navigate = useNavigate();
 
-  async function handleNewGameCration() {
+  async function handleNewGameCreation() {
     try {
-      const data = await createGame()
-      socket.on("connect", () => {
-        console.log("CONNECTED:", socket.id);
-      });
-
-      socket.on("connect_error", (error) => {
-        console.error("SOCKET ERROR:", error.message);
-        console.error(error);
-      });
-
-      socket.connect();
+      const game = await createGame()
+      navigate(`/game/${game.id}`)
     }
     catch (error) {
       console.error("Could not create new game:", error);
@@ -54,7 +45,7 @@ function HomePage() {
 
           }}>
           <Button onClick={() => setMenuState("createGame")} variant="contained"> new game</Button>
-          <Button onClick={() => setMenuState("createGame")} variant="contained"> login</Button>
+          <Button onClick={() => navigate("/auth")} variant="contained"> login</Button>
         </Stack>
       </Fade>
 
@@ -87,7 +78,7 @@ function HomePage() {
               3 | 2
             </Button>
           </Stack>
-          <Button onClick={handleNewGameCration} variant="contained"> Create Game</Button>
+          <Button onClick={handleNewGameCreation} variant="contained"> Create Game</Button>
         </Stack>
       </Fade>
 
