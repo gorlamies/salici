@@ -2,10 +2,12 @@ import { Box } from "@mui/material";
 import Square from "./Square"
 import type { SquareName, Position, FenPiece, Color } from "../types/chess";
 import { useState, useEffect } from "react";
+import {socket} from "../socket"
+import type { Game } from "../api/games";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const ranks = [8, 7, 6, 5, 4, 3, 2, 1] as const;
-const fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+// const fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 const pieceImages: Record<FenPiece, string> = {
   p: "/pieces/PawnBlack.svg",
@@ -24,23 +26,38 @@ const pieceImages: Record<FenPiece, string> = {
 
 interface BoardProps {
   color: Color
+  gameId: Number
 }
 
-function Board({ color }: BoardProps) {
+function Board({ color, gameId }: BoardProps) {
 
-  const [SelectedSquare, setSelectedSquare] = useState<SquareName | null>(null);
-  const [position, SetPosition] = useState<Position>({});
+  const [selectedSquare, setSelectedSquare] = useState<SquareName | null>(null);
+  const [position, setPosition] = useState<Position>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
 
-    // function definition
-    async function loadPosition() {
-      SetPosition(parseFen(fen));
+    function handleState(game: Game) {
+      setPosition(parseFen(game.currentFen));
+      setErrorMessage(null);
+    }
+  
+    function handleError(error: {message: string}) {
+      setErrorMessage(error.message);
     }
 
-    // function call
-    loadPosition();
-  }, []);
+    socket.on("game.state", handleState);
+    socket.on("game.error", handleError);
+
+    socket.connect();
+    socket.emit("game.join", {gameId});
+
+    return () => {
+      socket.off("game.state", handleState);
+      socket.off("game.error", handleError);
+      socket.disconnect();
+    };
+  }, [gameId]);
 
   function canSelectPiece(piece: FenPiece | undefined): Boolean {
 
@@ -54,32 +71,24 @@ function Board({ color }: BoardProps) {
   function handleSquareClick(name: SquareName) {
 
     // deselect on double click on same square
-    if (SelectedSquare == name) {
+    if (selectedSquare == name) {
       setSelectedSquare(null)
       return
     }
 
     // no square selected
-    if (SelectedSquare == null) {
+    if (selectedSquare == null) {
       if (canSelectPiece(position[name])) {
         setSelectedSquare(name)
       }
       return
     }
 
-    //first click is non empty
-
-    const piece = position[SelectedSquare];
-    // another check that piece exist
-    if (!piece) {
-      setSelectedSquare(null)
-      return
-    }
-    const nextPosition: Position = { ...position }
-    nextPosition[name] = piece
-    delete nextPosition[SelectedSquare]
-
-    SetPosition(nextPosition)
+    // second click: ask the server to apply this move, don't touch the board ourselves
+    socket.emit("game.move", {
+      gameId,
+      move: { from: selectedSquare, to: name },
+    });
     setSelectedSquare(null)
   }
 
@@ -95,7 +104,7 @@ function Board({ color }: BoardProps) {
             key={name}
             name={name}
             dark={(rowIndex + columnIndex) % 2 === 1}
-            selected={SelectedSquare === name}
+            selected={selectedSquare === name}
             onClick={handleSquareClick}
             image={piece ? pieceImages[piece] : undefined}
           />
@@ -131,15 +140,20 @@ function Board({ color }: BoardProps) {
 
 
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: "repeat(8, 1fr)",
-        width: "100%",
-        maxWidth: 560,
-      }}
-    >
-      {renderBoard()}
+    <Box>
+      {errorMessage && (
+        <Box sx={{ color: "error.main", mb: 1 }}>{errorMessage}</Box>
+      )}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(8, 1fr)",
+          width: "100%",
+          maxWidth: 560,
+        }}
+      >
+        {renderBoard()}
+      </Box>
     </Box>
   );
 }
