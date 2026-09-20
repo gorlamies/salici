@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "prisma migrate deploy && nodemon --legacy-watch --exec \"ts-node --transpile-only\" src/main.ts",
     "build": "tsc",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch"
+
   },
   "keywords": [],
   "author": "",
@@ -14,9 +17,12 @@
   "type": "commonjs",
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.5.0",
+    "jest": "^30.5.2",
     "nodemon": "^3.1.14",
     "prisma": "^6.19.3",
+    "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   },
@@ -36,5 +42,25 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "jest": {
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "testEnvironment": "node",
+    "extensionsToTreatAsEsm": [".ts"],
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "useESM": true,
+          "tsconfig": {
+            "module": "ESNext",
+            "moduleResolution": "Bundler",
+            "esModuleInterop": true
+          }
+        }
+      ]
+    }
   }
 }
