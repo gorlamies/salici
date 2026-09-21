@@ -47,21 +47,84 @@ export class AuthService {
             throw new UnauthorizedException('Invalid username or password');
         }
 
+        const accessToken = await this.jwtService.signAsync(
+            {
+                sub: dto.username, // better than dto.username
+            },
+            {
+                secret: process.env.JWT_ACCESS_SECRET!,
+                expiresIn: '15m',
+            },
+        );
 
-        const accessToken = await this.jwtService.signAsync({
-            sub: dto.username,
-        });
+        const refreshToken = await this.jwtService.signAsync(
+            {
+                sub: dto.username,
+            },
+            {
+                secret: process.env.JWT_REFRESH_SECRET!,
+                expiresIn: '2d',
+            },
+        );
 
         return {
             accessToken,
+            refreshToken,
+        };
+
+    }
+
+    async refresh(refreshToken: string) {
+        let payload;
+
+        try {
+            payload = await this.jwtService.verifyAsync(refreshToken, {
+                secret: process.env.JWT_REFRESH_SECRET!,
+            });
+        } catch {
+            throw new UnauthorizedException('Invalid or expired refresh token');
+        }
+
+        const username = payload.sub;
+        const accessToken = await this.jwtService.signAsync(
+            {
+                sub: username, // better than dto.username
+            },
+            {
+                secret: process.env.JWT_ACCESS_SECRET!,
+                expiresIn: '15m',
+            },
+        );
+
+        const now = Math.floor(Date.now() / 1000);
+        const remainingTtl = payload.exp - now;
+        const refreshThreshold = 24 * 60 * 60; // 1 day
+
+        if (remainingTtl < refreshThreshold) {
+            const newRefreshToken = await this.jwtService.signAsync(
+                {
+                    sub: username,
+                },
+                {
+                    secret: process.env.JWT_REFRESH_SECRET!,
+                    expiresIn: '2d',
+                },
+            );
+
+            return {
+                accessToken,
+                refreshToken: newRefreshToken,
+            };
+        }
+
+        return {
+            accessToken,
+            refreshToken: null
         };
 
 
-    }
-    /*
-        async refresh() { }
-    */
 
+    }
 }
 
 

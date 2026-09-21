@@ -4,6 +4,8 @@ import { useNavigate } from "react-router";
 import type { MenuState } from "../types/menu";
 import { createGame } from "../api/games"
 import { io } from "socket.io-client";
+import { useAuth } from "../context/AuthContext";
+import { refreshAccessToken } from "../api/auth"
 
 
 const socket = io("http://localhost:3000", {
@@ -15,6 +17,7 @@ function HomePage() {
   const [menuState, setMenuState] = useState<MenuState>("main")
   const [time, setTime] = useState("")
   const navigate = useNavigate();
+  const { accessToken, setAccessToken } = useAuth()
 
   async function handleNewGameCreation() {
     try {
@@ -25,6 +28,11 @@ function HomePage() {
       console.error("Could not create new game:", error);
     }
 
+  }
+
+  async function refresh() {
+    const tk = await refreshAccessToken()
+    setAccessToken(tk)
   }
 
   return (
@@ -46,6 +54,8 @@ function HomePage() {
           }}>
           <Button onClick={() => setMenuState("createGame")} variant="contained"> new game</Button>
           <Button onClick={() => navigate("/auth")} variant="contained"> login</Button>
+          <Button onClick={() => console.log(accessToken)} variant="contained"> test token</Button>
+          <Button onClick={refresh} variant="contained"> refresh token</Button>
         </Stack>
       </Fade>
 

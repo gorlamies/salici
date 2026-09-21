@@ -1,3 +1,5 @@
+const backend_url = import.meta.env.VITE_BACKEND_URL
+
 export interface SignupDto {
     username: string;
     email: string;
@@ -13,7 +15,7 @@ export interface LoginResponse {
     accessToken: string;
 }
 export async function signup(dto: SignupDto) {
-    const response = await fetch("http://localhost:3000/auth/signup", {
+    const response = await fetch(backend_url + "/auth/signup", {
         method: "POST", headers: {
             "Content-Type": "application/json",
         },
@@ -27,8 +29,10 @@ export async function signup(dto: SignupDto) {
 }
 
 export async function login(dto: LoginDto): Promise<LoginResponse> {
-    const response = await fetch("http://localhost:3000/auth/login", {
-        method: "POST", headers: {
+    const response = await fetch(backend_url + "/auth/login", {
+        method: "POST",
+        credentials: 'include',
+        headers: {
             "Content-Type": "application/json",
         },
         body: JSON.stringify(dto),
@@ -39,4 +43,18 @@ export async function login(dto: LoginDto): Promise<LoginResponse> {
     }
     const data = await response.json();
     return data;
+}
+
+export async function refreshAccessToken() {
+    const response = await fetch(backend_url + "/auth/refresh", {
+        method: 'POST',
+        credentials: 'include',
+    })
+    if (!response.ok) {
+        const body = await response.text();
+        console.log('refresh error body:', body);
+        throw new Error('Unable to refresh session');
+    }
+    const data = await response.json();
+    return data.accessToken;
 }

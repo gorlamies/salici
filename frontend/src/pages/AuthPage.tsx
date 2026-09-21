@@ -27,12 +27,12 @@ function AuthPage() {
         setError(null);
         setLoading(true);
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
         try {
             if (mode === "login") {
                 const dto: LoginDto = { username, password };
                 const data = await login(dto);
                 setAccessToken(data.accessToken)
+                navigate("/")
 
             }
             else {
