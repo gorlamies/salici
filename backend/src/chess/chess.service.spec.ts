@@ -1,5 +1,9 @@
 import { ChessService } from "./chess.service";
-import { InvalidFenError, IllegalMoveError } from "./chess.errors";
+import {
+  InvalidFenError,
+  IllegalMoveError,
+  InvalidMoveHistoryError,
+} from "./chess.errors";
 
 describe("ChessService", () => {
   let chessService: ChessService;
@@ -7,6 +11,17 @@ describe("ChessService", () => {
   beforeEach(() => {
     chessService = new ChessService();
   });
+
+  // plays a move on top of the moves already played and records its SAN,
+  // the same way GamesService stores and replays the history of a game
+  function playMove(
+    initialFen: string,
+    history: string[],
+    from: string,
+    to: string,
+  ) {
+    history.push(chessService.applyMove(initialFen, { from, to }, history).san);
+  }
 
   describe("createInitialPosition", () => {
     test("returns the standard starting position FEN", () => {
@@ -66,37 +81,19 @@ describe("ChessService", () => {
 
     test("detects a draw by the fifty-move rule", () => {
       // halfmove clock at 100 = 50 full moves without a capture or pawn move
-      const fen = "4k3/8/8/8/8/8/8/4K3 w - - 100 60";
+      // (a white rook is on the board, so the material is sufficient and only the clock can cause the draw)
+      const fen = "4k3/8/8/8/8/8/8/R3K3 w - - 100 60";
       const status = chessService.getStatus(fen);
 
       expect(status.isDraw).toBe(true);
       expect(status.isGameOver).toBe(true);
-    });
-
-    test("detects a draw by threefold repetition", () => {
-      let fen = chessService.createInitialPosition();
-
-      fen = chessService.applyMove(fen, { from: "g1", to: "f3" }).fenAfter;
-      fen = chessService.applyMove(fen, { from: "g8", to: "f6" }).fenAfter;
-      fen = chessService.applyMove(fen, { from: "f3", to: "g1" }).fenAfter;
-      fen = chessService.applyMove(fen, { from: "f6", to: "g8" }).fenAfter;
-      // second occurrence
-
-      fen = chessService.applyMove(fen, { from: "g1", to: "f3" }).fenAfter;
-      fen = chessService.applyMove(fen, { from: "g8", to: "f6" }).fenAfter;
-      fen = chessService.applyMove(fen, { from: "f3", to: "g1" }).fenAfter;
-      const result = chessService.applyMove(fen, { from: "f6", to: "g8" });
-      // third occurrence: this should be a draw
-
-      expect(result.isDraw).toBe(true);
-      expect(result.isGameOver).toBe(true);
     });
   });
 
   describe("applyMove", () => {
     test("applies a legal pawn move and returns the resulting state", () => {
       const fen = chessService.createInitialPosition();
-      const result = chessService.applyMove(fen, { from: "d2", to: "d4" });
+      const result = chessService.applyMove(fen, { from: "d2", to: "d4" }, []);
 
       expect(result.san).toBe("d4");
       expect(result.turnAfter).toBe("b");
@@ -108,7 +105,7 @@ describe("ChessService", () => {
     test("applies a capture", () => {
       // white pawn e4, black pawn d5, white to move: exd5
       const fen = "4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1";
-      const result = chessService.applyMove(fen, { from: "e4", to: "d5" });
+      const result = chessService.applyMove(fen, { from: "e4", to: "d5" }, []);
 
       expect(result.san).toBe("exd5");
       expect(result.turnAfter).toBe("b");
@@ -116,7 +113,7 @@ describe("ChessService", () => {
 
     test("applies kingside castling", () => {
       const fen = "4k3/8/8/8/8/8/8/4K2R w K - 0 1";
-      const result = chessService.applyMove(fen, { from: "e1", to: "g1" });
+      const result = chessService.applyMove(fen, { from: "e1", to: "g1" }, []);
 
       expect(result.san).toBe("O-O");
       expect(result.to).toBe("g1");
@@ -125,7 +122,7 @@ describe("ChessService", () => {
 
     test("applies an en passant capture", () => {
       const fen = "4k3/8/8/8/3pP3/8/8/4K3 b - e3 0 1";
-      const result = chessService.applyMove(fen, { from: "d4", to: "e3" });
+      const result = chessService.applyMove(fen, { from: "d4", to: "e3" }, []);
 
       expect(result.san).toBe("dxe3");
       expect(result.to).toBe("e3");
@@ -134,11 +131,11 @@ describe("ChessService", () => {
 
     test("applies a pawn promotion", () => {
       const fen = "7k/P7/8/8/8/8/8/K7 w - - 0 1";
-      const result = chessService.applyMove(fen, {
-        from: "a7",
-        to: "a8",
-        promotion: "n",
-      });
+      const result = chessService.applyMove(
+        fen,
+        { from: "a7", to: "a8", promotion: "n" },
+        [],
+      );
 
       expect(result.san).toBe("a8=N");
       expect(result.to).toBe("a8");
@@ -148,8 +145,83 @@ describe("ChessService", () => {
     test("throws IllegalMoveError for a move that breaks chess rules", () => {
       const fen = chessService.createInitialPosition();
       expect(() =>
-        chessService.applyMove(fen, { from: "d1", to: "e8" }),
+        chessService.applyMove(fen, { from: "d1", to: "e8" }, []),
       ).toThrow(IllegalMoveError);
+    });
+
+    test("throws InvalidFenError for a bad initial FEN", () => {
+      expect(() =>
+        chessService.applyMove("bad FEN", { from: "e2", to: "e4" }, []),
+      ).toThrow(InvalidFenError);
+    });
+
+    test("detects checkmate", () => {
+      // 1. f3 e5 2. g4 Qh4#
+      const fen = chessService.createInitialPosition();
+      const result = chessService.applyMove(
+        fen,
+        { from: "d8", to: "h4" },
+        ["f3", "e5", "g4"],
+      );
+
+      expect(result.san).toBe("Qh4#");
+      expect(result.isCheck).toBe(true);
+      expect(result.isCheckmate).toBe(true);
+      expect(result.isGameOver).toBe(true);
+    });
+
+    test("detects a draw by threefold repetition", () => {
+      const fen = chessService.createInitialPosition();
+      const history: string[] = [];
+
+      playMove(fen, history, "g1", "f3");
+      playMove(fen, history, "g8", "f6");
+      playMove(fen, history, "f3", "g1");
+      playMove(fen, history, "f6", "g8");
+      // second occurrence
+
+      playMove(fen, history, "g1", "f3");
+      playMove(fen, history, "g8", "f6");
+      playMove(fen, history, "f3", "g1");
+      const result = chessService.applyMove(fen, { from: "f6", to: "g8" }, history);
+      // third occurrence: this should be a draw
+
+      expect(result.isDraw).toBe(true);
+      expect(result.isGameOver).toBe(true);
+    });
+
+    test("does not declare a draw on the second occurrence of a position", () => {
+      const fen = chessService.createInitialPosition();
+      const history: string[] = [];
+
+      playMove(fen, history, "g1", "f3");
+      playMove(fen, history, "g8", "f6");
+      playMove(fen, history, "f3", "g1");
+      const result = chessService.applyMove(fen, { from: "f6", to: "g8" }, history);
+      // second occurrence: the game goes on
+
+      expect(result.isDraw).toBe(false);
+      expect(result.isGameOver).toBe(false);
+    });
+  });
+
+  describe("move history", () => {
+    test("takes the turn into account after the moves already played", () => {
+      const fen = chessService.createInitialPosition();
+
+      // after 1. e4 it is black's turn, so a white pawn cannot move
+      expect(() =>
+        chessService.applyMove(fen, { from: "d2", to: "d4" }, ["e4"]),
+      ).toThrow(IllegalMoveError);
+    });
+
+    test("throws InvalidMoveHistoryError when the history contains an illegal move", () => {
+      const fen = chessService.createInitialPosition();
+
+      // "e5" is not playable by white from the starting position
+      expect(() =>
+        chessService.applyMove(fen, { from: "e2", to: "e4" }, ["e5"]),
+      ).toThrow(InvalidMoveHistoryError);
     });
   });
 });
