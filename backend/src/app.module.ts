@@ -4,9 +4,10 @@ import { DatabaseModule } from "./database/database.module";
 import { GamesModule } from "./games/games.module";
 import { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { LoggerMiddleware } from "./common/middleware/logger.middleware";
+import { AuthModule } from "./auth/auth.module";
 
 @Module({
-  imports: [HealthModule, GamesModule, DatabaseModule],
+  imports: [HealthModule, GamesModule, DatabaseModule, AuthModule],
   controllers: [],
   providers: [],
 })
