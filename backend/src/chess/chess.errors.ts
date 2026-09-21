@@ -11,3 +11,10 @@ export class IllegalMoveError extends Error {
         this.name = "IllegalMoveError";
     }
 }
+
+export class InvalidMoveHistoryError extends Error {
+    constructor(message = "The stored move history is not valid.") {
+        super(message);
+        this.name = "InvalidMoveHistoryError";
+    }
+}

@@ -14,7 +14,7 @@ export class GamesService {
   constructor(
     private readonly chessService: ChessService,
     private readonly prismaService: PrismaService,
-  ) { }
+  ) {}
 
   async createGame() {
     const fen = this.chessService.createInitialPosition();
@@ -53,9 +53,16 @@ export class GamesService {
           throw new ConflictException("The game is already finished.");
         }
 
+        // the full history is needed to detect rules that depend on the past (threefold repetition), so the game is replayed from its first position.
+        const previousMoves = await tx.move.findMany({
+          where: { gameId: id },
+          orderBy: { moveNumber: "asc" },
+          select: { san: true },
+        });
+
         let applied: AppliedChessMove;
         try {
-          applied = this.chessService.applyMove(game.currentFen, input);
+          applied = this.chessService.applyMove(game.initialFen, input, previousMoves.map((previousMove) => previousMove.san));
         } catch (error) {
           if (error instanceof IllegalMoveError) {
             throw new ConflictException(error.message);
@@ -63,7 +70,7 @@ export class GamesService {
           throw error;
         }
 
-        const moveNumber = (await tx.move.count({ where: { gameId: id } })) + 1;
+        const moveNumber = previousMoves.length + 1;
 
         await tx.move.create({
           data: {
