@@ -39,7 +39,7 @@ function AuthPage() {
                 const dto: SignupDto = { username, email, password }
                 await signup(dto)
             }
-            navigate("/");
+            setMode("login");
         }
         catch (err) {
             if (err instanceof Error) {
