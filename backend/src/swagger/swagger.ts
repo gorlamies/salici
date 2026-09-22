@@ -6,6 +6,7 @@ export function setupSwagger(app: INestApplication) {
         .setTitle('Salici Chess API')
         .setDescription('API documentation for the Salici chess backend')
         .setVersion('1.0')
+        .addBearerAuth()
         .build();
 
     const documentFactory = () =>

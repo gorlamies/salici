@@ -1,13 +1,17 @@
-import { Body, Controller, Get, Post, Param, ParseIntPipe } from "@nestjs/common";
+import { Body, Controller, Get, Post, Param, ParseIntPipe, UseGuards } from "@nestjs/common";
 import { GamesService } from "./games.service";
 import { ChessMoveInput } from "../chess/chess.types";
-import { ApiBody } from "@nestjs/swagger";
+import { ApiBody, ApiBearerAuth } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../auth/auth.guard";
+
 
 @Controller("games")
 export class GamesController {
   constructor(private readonly gamesService: GamesService) { }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   createGame() {
     return this.gamesService.createGame();
   }
