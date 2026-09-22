@@ -4,9 +4,10 @@ import { GamesService } from './games.service';
 import { ChessModule } from '../chess/chess.module';
 import { DatabaseModule } from '../database/database.module';
 import { GamesGateway } from './games.gateway'
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [ChessModule, DatabaseModule],
+  imports: [ChessModule, DatabaseModule, AuthModule],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway],
 })
