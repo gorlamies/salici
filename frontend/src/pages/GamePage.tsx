@@ -30,7 +30,7 @@ function GamePage() {
         onClick={() => navigate("/")}>
         homepage
       </Button>
-      <DialogEndGame open={true} result="white Winner" />
+      <DialogEndGame open={false} result="white Winner" />
     </>
   )
 }
