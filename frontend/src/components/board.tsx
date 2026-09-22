@@ -2,8 +2,9 @@ import { Box } from "@mui/material";
 import Square from "./Square"
 import type { SquareName, Position, FenPiece, Color } from "../types/chess";
 import { useState, useEffect } from "react";
-import {socket} from "../socket"
+import { socket } from "../socket"
 import type { Game } from "../api/games";
+import { Transform } from "@mui/icons-material";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const ranks = [8, 7, 6, 5, 4, 3, 2, 1] as const;
@@ -41,8 +42,8 @@ function Board({ color, gameId }: BoardProps) {
       setPosition(parseFen(game.currentFen));
       setErrorMessage(null);
     }
-  
-    function handleError(error: {message: string}) {
+
+    function handleError(error: { message: string }) {
       setErrorMessage(error.message);
     }
 
@@ -50,7 +51,7 @@ function Board({ color, gameId }: BoardProps) {
     socket.on("game.error", handleError);
 
     socket.connect();
-    socket.emit("game.join", {gameId});
+    socket.emit("game.join", { gameId });
 
     return () => {
       socket.off("game.state", handleState);
@@ -107,6 +108,7 @@ function Board({ color, gameId }: BoardProps) {
             selected={selectedSquare === name}
             onClick={handleSquareClick}
             image={piece ? pieceImages[piece] : undefined}
+            orientation={color}
           />
         );
       })
@@ -150,6 +152,7 @@ function Board({ color, gameId }: BoardProps) {
           gridTemplateColumns: "repeat(8, 1fr)",
           width: "100%",
           maxWidth: 560,
+          transform: color === "b" ? "rotate(180deg)" : "none",
         }}
       >
         {renderBoard()}

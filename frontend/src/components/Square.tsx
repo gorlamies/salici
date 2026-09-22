@@ -1,5 +1,6 @@
 import { ButtonBase } from "@mui/material"
 import type { SquareName } from "../types/chess";
+import type { SxProps, Theme } from "@mui/material";
 
 interface SquareProps {
     name: SquareName
@@ -7,9 +8,10 @@ interface SquareProps {
     selected: boolean
     onClick: (name: SquareName) => void;
     image?: string
+    orientation: string;
 }
 
-function Square({ name, dark, selected, onClick, image }: SquareProps) {
+function Square({ name, dark, selected, onClick, image, orientation }: SquareProps) {
     return (
         <ButtonBase
             onClick={() => onClick(name)}
@@ -18,6 +20,7 @@ function Square({ name, dark, selected, onClick, image }: SquareProps) {
                 aspectRatio: "1 / 1",
                 backgroundColor: selected ? dark ? "#dfff77" : "#e3ecae" : dark ? "#73bbfa" : "#cfeaff",
                 borderRadius: 0,
+                transform: orientation === "b" ? "rotate(180deg)" : "none",
             }}
         >
             {image ? <img
