@@ -4,7 +4,6 @@ import type { SquareName, Position, FenPiece, Color } from "../types/chess";
 import { useState, useEffect } from "react";
 import { socket } from "../socket"
 import type { Game } from "../api/games";
-import { Transform } from "@mui/icons-material";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const ranks = [8, 7, 6, 5, 4, 3, 2, 1] as const;

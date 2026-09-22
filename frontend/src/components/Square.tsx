@@ -1,6 +1,5 @@
 import { ButtonBase } from "@mui/material"
 import type { SquareName } from "../types/chess";
-import type { SxProps, Theme } from "@mui/material";
 
 interface SquareProps {
     name: SquareName

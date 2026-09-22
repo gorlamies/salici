@@ -1,6 +1,7 @@
 import Board from "../components/board"
 import { Box, Button } from "@mui/material";
-import { useNavigate, useParams, useSearchParams  } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
+import DialogEndGame from "../components/DialogEndGame"
 import type { Color } from "../types/chess";
 
 function GamePage() {
@@ -29,6 +30,7 @@ function GamePage() {
         onClick={() => navigate("/")}>
         homepage
       </Button>
+      <DialogEndGame open={false} result="white Winner" />
     </>
   )
 }
