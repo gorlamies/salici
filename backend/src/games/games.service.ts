@@ -8,6 +8,9 @@ import { ChessService } from "../chess/chess.service";
 import { PrismaService } from "../database/prisma.service";
 import { ChessMoveInput, AppliedChessMove } from "../chess/chess.types";
 import { IllegalMoveError } from "../chess/chess.errors";
+import type { GameModel, MoveModel } from "../generated/prisma/models";
+import { GameDto } from "./dto/game.dto";
+import { MoveDto } from "./dto/move.dto";
 
 @Injectable()
 export class GamesService {
@@ -16,27 +19,33 @@ export class GamesService {
     private readonly prismaService: PrismaService,
   ) {}
 
-  async createGame() {
+  async createGame(): Promise<GameDto> {
     const fen = this.chessService.createInitialPosition();
-    return this.prismaService.game.create({
+    const game = await this.prismaService.game.create({
       data: {
         initialFen: fen,
         currentFen: fen,
       },
     });
+
+    return this.toGameDto(game, []);
   }
 
-  async getGame(id: number) {
-    const game = await this.prismaService.game.findUnique({ where: { id } });
+  async getGame(id: number): Promise<GameDto> {
+    const game = await this.prismaService.game.findUnique({
+      where: { id },
+      include: { moves: { orderBy: { moveNumber: "asc" } } },
+    });
 
     if (!game) {
       throw new NotFoundException(`Game ${id} not found`);
     }
 
-    return game;
+    const { moves, ...gameFields } = game;
+    return this.toGameDto(gameFields, moves);
   }
 
-  async applyMove(id: number, input: ChessMoveInput) {
+  async applyMove(id: number, input: ChessMoveInput): Promise<GameDto> {
     if (!input?.from || !input?.to) {
       throw new BadRequestException("Both 'from' and 'to' are required.");
     }
@@ -57,7 +66,6 @@ export class GamesService {
         const previousMoves = await tx.move.findMany({
           where: { gameId: id },
           orderBy: { moveNumber: "asc" },
-          select: { san: true },
         });
 
         let applied: AppliedChessMove;
@@ -72,7 +80,7 @@ export class GamesService {
 
         const moveNumber = previousMoves.length + 1;
 
-        await tx.move.create({
+        const createdMove = await tx.move.create({
           data: {
             gameId: id,
             moveNumber,
@@ -85,7 +93,7 @@ export class GamesService {
           },
         });
 
-        return tx.game.update({
+        const updatedGame = await tx.game.update({
           where: { id },
           data: {
             currentFen: applied.fenAfter,
@@ -94,6 +102,8 @@ export class GamesService {
             finishedAt: applied.isGameOver ? new Date() : null,
           },
         });
+
+        return this.toGameDto(updatedGame, [...previousMoves, createdMove])
       });
     } catch (error) {
       if ((error as { code?: string })?.code === "P2002") {
@@ -113,5 +123,31 @@ export class GamesService {
       return "draw";
     }
     return null;
+  }
+
+  private toMoveDto(move: MoveModel): MoveDto {
+    return {
+      moveNumber: move.moveNumber,
+      from: move.from,
+      to: move.to,
+      promotion: move.promotion,
+      san: move.san,
+      uci: move.uci,
+      fenAfter: move.fenAfter,
+      createdAt: move.createdAt,
+    };
+  }
+
+  private toGameDto(game: GameModel, moves: MoveModel[]): GameDto {
+    return {
+      id: game.id,
+      running: game.running,
+      initialFen: game.initialFen,
+      currentFen: game.currentFen,
+      result: game.result,
+      createdAt: game.createdAt,
+      finishedAt: game.finishedAt,
+      moves: moves.map((move) => this.toMoveDto(move)),
+    };
   }
 }
