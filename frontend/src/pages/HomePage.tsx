@@ -3,14 +3,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import type { MenuState } from "../types/menu";
 import { createGame } from "../api/games"
-import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { refreshAccessToken } from "../api/auth"
-
-
-const socket = io("http://localhost:3000", {
-  autoConnect: false,
-});
 
 function HomePage() {
 
@@ -20,8 +14,12 @@ function HomePage() {
   const { accessToken, setAccessToken } = useAuth()
 
   async function handleNewGameCreation() {
+    if(!accessToken) {
+      console.error("You must be logged in to create a game.")
+      return;
+    }
     try {
-      const game = await createGame()
+      const game = await createGame(accessToken!)
       navigate(`/game/${game.id}`)
     }
     catch (error) {
