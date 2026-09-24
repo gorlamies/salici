@@ -10,11 +10,11 @@ type AuthMode = "login" | "signup"
 
 function AuthPage() {
     const navigate = useNavigate()
-    const { setAccessToken } = useAuth();
+    const { setAccessToken, setUsername } = useAuth();
 
     const [mode, setMode] = useState<AuthMode>("login");
 
-    const [username, setUsername] = useState("");
+    const [username, setUser] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -26,6 +26,7 @@ function AuthPage() {
 
         setError(null);
         setLoading(true);
+        setUsername(username)
 
         try {
             if (mode === "login") {
@@ -74,7 +75,7 @@ function AuthPage() {
                 <TextField
                     label="Username"
                     value={username}
-                    onChange={(event) => setUsername(event.target.value)}
+                    onChange={(event) => setUser(event.target.value)}
                     required
                     fullWidth
                 />

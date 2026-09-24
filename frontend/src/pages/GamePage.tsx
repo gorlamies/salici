@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import Board from "../components/board"
 import { Box, Button } from "@mui/material";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import DialogEndGame from "../components/DialogEndGame"
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
-import { socket } from "../socket"
+import { io } from "socket.io-client"
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 
@@ -49,10 +50,33 @@ function resolveResultLabel(result: string | null): string {
 
 function GamePage() {
   const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>();
-  const gameId = Number(id)
-  const [searchParams] = useSearchParams();
-  const color: Color = searchParams.get("color") === "w" ? "W" : "b";
+  const { gameId } = useParams();
+  const { accessToken } = useAuth();
+
+  const socket = io("http://localhost:3000", {
+    auth: {
+      token: accessToken,
+    },
+  });
+
+  socket.on("connect", () => {
+    console.log("WebSocket connected");
+    console.log(gameId)
+
+    socket.emit("game.join", {
+      gameId,
+    });
+  });
+
+  socket.on("game.state", (game) => {
+    console.log("Game received:", game);
+  });
+
+  socket.on("game.error", (error) => {
+    console.error("Game error:", error);
+  });
+
+
 
   const [position, setPosition] = useState<Position>({});
   const [moves, setMoves] = useState<Move[]>([]);
@@ -60,6 +84,7 @@ function GamePage() {
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
+  /*
   useEffect(() => {
 
     function handleState(game: Game) {
@@ -86,6 +111,7 @@ function GamePage() {
       socket.disconnect();
     };
   }, [gameId]);
+  */
 
   function handleMove(from: SquareName, to: SquareName) {
     socket.emit("game.move", {
@@ -106,7 +132,7 @@ function GamePage() {
         }}
       >
         <Board
-          color={color}
+          color="W"
           position={position}
           moves={moves}
           errorMessage={errorMessage}

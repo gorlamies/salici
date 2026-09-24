@@ -9,11 +9,13 @@ import { Server, Socket } from "socket.io";
 import { GamesService } from "./games.service";
 import { ChessMoveInput } from "../chess/chess.types";
 import { toErrorPayload } from "../common/filters/all-exceptions.filter";
+import { WsJwtAuthGuard } from "../auth/auth.ws.guard";
+import { UseGuards } from "@nestjs/common";
 
-type JoinPayload = { gameId: number };
-type MovePayload = { gameId: number; move: ChessMoveInput };
+type JoinPayload = { gameId: string };
+type MovePayload = { gameId: string; move: ChessMoveInput };
 
-function gameRoom(gameId: number): string {
+function gameRoom(gameId: string): string {
   return `game:${gameId}`;
 }
 
@@ -24,8 +26,9 @@ export class GamesGateway {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly gamesService: GamesService) {}
+  constructor(private readonly gamesService: GamesService) { }
 
+  @UseGuards(WsJwtAuthGuard)
   @SubscribeMessage("game.join")
   async handleJoin(
     @ConnectedSocket() client: Socket,
@@ -45,6 +48,8 @@ export class GamesGateway {
     }
   }
 
+  /*
+
   @SubscribeMessage("game.move")
   async handleMove(
     @ConnectedSocket() client: Socket,
@@ -62,4 +67,5 @@ export class GamesGateway {
       client.emit("game.error", toErrorPayload(error));
     }
   }
+    */
 }

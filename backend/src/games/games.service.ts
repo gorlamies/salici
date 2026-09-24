@@ -11,27 +11,52 @@ import { IllegalMoveError } from "../chess/chess.errors";
 import type { GameModel, MoveModel } from "../generated/prisma/models";
 import { GameDto } from "./dto/game.dto";
 import { MoveDto } from "./dto/move.dto";
+import { CreateGameDto } from "./dto/createGame.dto";
 
 @Injectable()
 export class GamesService {
   constructor(
     private readonly chessService: ChessService,
     private readonly prismaService: PrismaService,
-  ) {}
+  ) { }
 
-  async createGame(): Promise<GameDto> {
+  async createGame(body: CreateGameDto): Promise<{ gameId: string }> {
     const fen = this.chessService.createInitialPosition();
+
+    //TODO: spacchetta token e controlla username di uno dei due uguale a username che trovi dentro il token, otherwise errore
+
+    const users = await this.prismaService.user.findMany({
+      where: {
+        username: {
+          in: [
+            body.playerOneUsername,
+            body.playerTwoUsername,
+          ],
+        },
+      },
+    });
+
+    if (users.length !== 2) {
+      throw new BadRequestException('One or both players do not exist');
+    }
+
     const game = await this.prismaService.game.create({
       data: {
         initialFen: fen,
         currentFen: fen,
+        whitePlayerUsername: body.playerOneUsername,
+        blackPlayerUsername: body.playerTwoUsername,
       },
     });
 
-    return this.toGameDto(game, []);
+    return {
+      gameId: game.id,
+    };
   }
 
-  async getGame(id: number): Promise<GameDto> {
+
+
+  async getGame(id: string): Promise<GameDto> {
     const game = await this.prismaService.game.findUnique({
       where: { id },
       include: { moves: { orderBy: { moveNumber: "asc" } } },
@@ -44,6 +69,8 @@ export class GamesService {
     const { moves, ...gameFields } = game;
     return this.toGameDto(gameFields, moves);
   }
+
+  /*
 
   async applyMove(id: number, input: ChessMoveInput): Promise<GameDto> {
     if (!input?.from || !input?.to) {
@@ -125,6 +152,8 @@ export class GamesService {
     return null;
   }
 
+   */
+
   private toMoveDto(move: MoveModel): MoveDto {
     return {
       moveNumber: move.moveNumber,
@@ -138,16 +167,21 @@ export class GamesService {
     };
   }
 
+
+
   private toGameDto(game: GameModel, moves: MoveModel[]): GameDto {
     return {
       id: game.id,
-      running: game.running,
+      state: game.state,
       initialFen: game.initialFen,
       currentFen: game.currentFen,
-      result: game.result,
+      whitePlayerUsername: game.whitePlayerUsername,
+      blackPlayerUsername: game.blackPlayerUsername,
       createdAt: game.createdAt,
       finishedAt: game.finishedAt,
       moves: moves.map((move) => this.toMoveDto(move)),
     };
   }
+
+
 }

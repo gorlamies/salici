@@ -1,4 +1,4 @@
-import { Box, Button, Fade, Stack } from "@mui/material";
+import { Box, Button, Fade, Stack, TextField } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import type { MenuState } from "../types/menu";
@@ -9,23 +9,24 @@ import { refreshAccessToken } from "../api/auth"
 function HomePage() {
 
   const [menuState, setMenuState] = useState<MenuState>("main")
-  const [time, setTime] = useState("")
+  const [opponent, setOpponent] = useState<string>("")
   const navigate = useNavigate();
-  const { accessToken, setAccessToken } = useAuth()
+  const { accessToken, setAccessToken, username } = useAuth()
 
   async function handleNewGameCreation() {
-    if(!accessToken) {
-      console.error("You must be logged in to create a game.")
-      return;
-    }
     try {
-      const game = await createGame(accessToken!)
-      navigate(`/game/${game.id}`)
-    }
-    catch (error) {
+      const gameId = await createGame(
+        {
+          playerOneUsername: username!, //test values
+          playerTwoUsername: opponent,
+        },
+        accessToken!,
+      );
+
+      navigate(`/game/${gameId}`);
+    } catch (error) {
       console.error("Could not create new game:", error);
     }
-
   }
 
   async function refresh() {
@@ -64,28 +65,11 @@ function HomePage() {
           sx={{
             position: "absolute",
           }}>
-          <Stack direction="row" spacing={2}>
-            <Button
-              variant={time === "10 | 0" ? "contained" : "outlined"}
-              onClick={() => setTime("10 | 0")}
-            >
-              10 | 0
-            </Button>
 
-            <Button
-              variant={time === "5 | 0" ? "contained" : "outlined"}
-              onClick={() => setTime("5 | 0")}
-            >
-              5 | 0
-            </Button>
-
-            <Button
-              variant={time === "3 | 2" ? "contained" : "outlined"}
-              onClick={() => setTime("3 | 2")}
-            >
-              3 | 2
-            </Button>
-          </Stack>
+          <TextField
+            value={opponent}
+            onChange={(event) => setOpponent(event.target.value)}
+          />
           <Button onClick={handleNewGameCreation} variant="contained"> Create Game</Button>
         </Stack>
       </Fade>

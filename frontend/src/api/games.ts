@@ -20,17 +20,26 @@ export type Game = {
   moves: Move[];
 };
 
-export async function createGame(accessToken: string): Promise<Game> {
+export interface CreateGameDto {
+  playerOneUsername: string;
+  playerTwoUsername: string
+}
+
+export async function createGame(dto: CreateGameDto, accessToken: string,): Promise<string> {
   const response = await fetch("http://localhost:3000/games", {
     method: "POST",
     headers: {
+      "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
+    body: JSON.stringify(dto),
   });
 
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  return data.gameId
 }
