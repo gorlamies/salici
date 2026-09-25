@@ -1,20 +1,45 @@
-import { Body, Controller, Get, Post, Param, ParseIntPipe, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  BadRequestException,
+  Get,
+  Post,
+  Param,
+  ParseIntPipe,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import { GamesService } from "./games.service";
 import { ChessMoveInput } from "../chess/chess.types";
 import { ApiBody, ApiBearerAuth, ApiOkResponse } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/auth.guard";
+import type { AuthenticatedRequest } from "../auth/auth.types";
 import { GameDto } from "./dto/game.dto";
 import { CreateGameDto } from "./dto/createGame.dto";
 
-
 @Controller("games")
 export class GamesController {
-  constructor(private readonly gamesService: GamesService) { }
+  constructor(private readonly gamesService: GamesService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  async createGame(@Body() body: CreateGameDto) {
+  async createGame(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: CreateGameDto,
+  ) {
+    if (
+      request.user.sub !== body.playerOneUsername &&
+      request.user.sub !== body.playerTwoUsername
+    ) {
+      throw new ForbiddenException("You can only create a game you play in"); // 403
+    }
+
+    if (body.playerOneUsername === body.playerTwoUsername) {
+      throw new BadRequestException("The two players must be different"); // 400
+    }
+
     return await this.gamesService.createGame(body);
   }
 
