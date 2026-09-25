@@ -1,3 +1,5 @@
 import { io } from "socket.io-client";
 
-export const socket = io("http://localhost:3000", { autoConnect: false }); // single connection for the whole app
+export const socket = io(import.meta.env.VITE_BACKEND_URL, {
+  autoConnect: false,
+}); // single connection for the whole app

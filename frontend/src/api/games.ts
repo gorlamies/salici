@@ -1,3 +1,5 @@
+const backend_url = import.meta.env.VITE_BACKEND_URL;
+
 export type Move = {
   moveNumber: number;
   from: string;
@@ -30,7 +32,7 @@ export async function createGame(
   dto: CreateGameDto,
   accessToken: string,
 ): Promise<string> {
-  const response = await fetch("http://localhost:3000/games", {
+  const response = await fetch(backend_url + "/games", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
