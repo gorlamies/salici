@@ -12,40 +12,42 @@ import type { GameModel, MoveModel } from "../generated/prisma/models";
 import { GameDto } from "./dto/game.dto";
 import { MoveDto } from "./dto/move.dto";
 import { CreateGameDto } from "./dto/createGame.dto";
+import { randomInt } from "crypto";
 
 @Injectable()
 export class GamesService {
   constructor(
     private readonly chessService: ChessService,
     private readonly prismaService: PrismaService,
-  ) { }
+  ) {}
 
   async createGame(body: CreateGameDto): Promise<{ gameId: string }> {
     const fen = this.chessService.createInitialPosition();
 
-    //TODO: spacchetta token e controlla username di uno dei due uguale a username che trovi dentro il token, otherwise errore
-
     const users = await this.prismaService.user.findMany({
       where: {
         username: {
-          in: [
-            body.playerOneUsername,
-            body.playerTwoUsername,
-          ],
+          in: [body.playerOneUsername, body.playerTwoUsername],
         },
       },
     });
 
     if (users.length !== 2) {
-      throw new BadRequestException('One or both players do not exist');
+      throw new BadRequestException("One or both players do not exist");
     }
+
+    const playerOneIsWhite = randomInt(2) === 0;
 
     const game = await this.prismaService.game.create({
       data: {
         initialFen: fen,
         currentFen: fen,
-        whitePlayerUsername: body.playerOneUsername,
-        blackPlayerUsername: body.playerTwoUsername,
+        whitePlayerUsername: playerOneIsWhite
+          ? body.playerOneUsername
+          : body.playerTwoUsername,
+        blackPlayerUsername: playerOneIsWhite
+          ? body.playerTwoUsername
+          : body.playerOneUsername,
       },
     });
 
@@ -53,8 +55,6 @@ export class GamesService {
       gameId: game.id,
     };
   }
-
-
 
   async getGame(id: string): Promise<GameDto> {
     const game = await this.prismaService.game.findUnique({
@@ -167,8 +167,6 @@ export class GamesService {
     };
   }
 
-
-
   private toGameDto(game: GameModel, moves: MoveModel[]): GameDto {
     return {
       id: game.id,
@@ -182,6 +180,4 @@ export class GamesService {
       moves: moves.map((move) => this.toMoveDto(move)),
     };
   }
-
-
 }
