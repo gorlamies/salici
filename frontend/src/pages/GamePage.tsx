@@ -1,117 +1,102 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import Board from "../components/board"
+import Board from "../components/board";
 import { Box, Button } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
-import DialogEndGame from "../components/DialogEndGame"
+import DialogEndGame from "../components/DialogEndGame";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
-import { io } from "socket.io-client"
+import { socket } from "../socket";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 
 export function parseFen(fen: string): Position {
-
-  const positionFen = fen.trim().split(/\s+/)[0]
-  const ranksFen = positionFen.split("/")
+  const positionFen = fen.trim().split(/\s+/)[0];
+  const ranksFen = positionFen.split("/");
   const position: Position = {};
 
   ranksFen.forEach((rankText, rowIndex) => {
-
     const rank = 8 - rowIndex;
     let fileIndex = 0;
 
     for (const char of rankText) {
       if ("12345678".includes(char)) {
         fileIndex += Number(char);
-      }
-      else {
+      } else {
         const square = `${files[fileIndex]}${rank}` as SquareName;
         position[square] = char as FenPiece;
         fileIndex += 1;
       }
     }
-  })
-  return position
+  });
+  return position;
 }
 
-function resolveResultLabel(result: string | null): string {
-  switch (result) {
-    case "white_win":
-      return "White wins";
-    case "black_win":
-      return "Black wins";
-    case "draw":
-      return "Draw";
-    default:
-      return "";
-  }
-}
+type GameError = {
+  status_code: number;
+  message: string;
+};
 
 function GamePage() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const { gameId } = useParams();
-  const { accessToken } = useAuth();
-
-  const socket = io("http://localhost:3000", {
-    auth: {
-      token: accessToken,
-    },
-  });
-
-  socket.on("connect", () => {
-    console.log("WebSocket connected");
-    console.log(gameId)
-
-    socket.emit("game.join", {
-      gameId,
-    });
-  });
-
-  socket.on("game.state", (game) => {
-    console.log("Game received:", game);
-  });
-
-  socket.on("game.error", (error) => {
-    console.error("Game error:", error);
-  });
-
-
+  const { accessToken, username } = useAuth();
 
   const [position, setPosition] = useState<Position>({});
   const [moves, setMoves] = useState<Move[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [color, setColor] = useState<Color | null>(null);
 
-  /*
   useEffect(() => {
+    function handleConnect() {
+      socket.emit("game.join", { gameId });
+    }
 
     function handleState(game: Game) {
       setPosition(parseFen(game.currentFen));
+
+      if (game.whitePlayerUsername === username) setColor("W");
+      else if (game.blackPlayerUsername === username) setColor("b");
+
       setMoves(game.moves);
-      setErrorMessage(null);
-      setGameOver(!game.running);
-      setResult(game.result);
+
+      setGameOver(game.finishedAt !== null);
+      // set result
+      switch (game.state) {
+        case "white_win":
+          setResult("White wins");
+          break;
+        case "black_win":
+          setResult("Black wins");
+          break;
+        case "draw":
+          setResult("Draw");
+          break;
+        default:
+          setResult(null);
+      }
     }
 
-    function handleError(error: { message: string }) {
-      setErrorMessage(error.message);
+    async function handleError(error: GameError) {
+      console.log(error.message);
     }
 
+    socket.auth = { token: accessToken };
+
+    socket.on("connect", handleConnect);
     socket.on("game.state", handleState);
     socket.on("game.error", handleError);
 
     socket.connect();
-    socket.emit("game.join", { gameId });
 
     return () => {
+      socket.off("connect", handleConnect);
       socket.off("game.state", handleState);
       socket.off("game.error", handleError);
       socket.disconnect();
     };
-  }, [gameId]);
-  */
+  }, [gameId, accessToken, username, navigate]);
 
   function handleMove(from: SquareName, to: SquareName) {
     socket.emit("game.move", {
@@ -132,21 +117,18 @@ function GamePage() {
         }}
       >
         <Board
-          color="W"
+          color={color}
           position={position}
           moves={moves}
-          errorMessage={errorMessage}
           onMove={handleMove}
         />
       </Box>
-      <Button
-        variant="contained"
-        onClick={() => navigate("/")}>
+      <Button variant="contained" onClick={() => navigate("/")}>
         homepage
       </Button>
-      <DialogEndGame open={gameOver} result={resolveResultLabel(result)} />
+      <DialogEndGame open={gameOver} result={result} />
     </>
-  )
+  );
 }
 
-export default GamePage
+export default GamePage;

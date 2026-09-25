@@ -10,22 +10,26 @@ export type Move = {
 };
 
 export type Game = {
-  id: number;
-  running: boolean;
+  id: string;
+  state: string;
   initialFen: string;
   currentFen: string;
-  result: string | null;
   createdAt: string;
   finishedAt: string | null;
+  whitePlayerUsername: string | null;
+  blackPlayerUsername: string | null;
   moves: Move[];
 };
 
 export interface CreateGameDto {
   playerOneUsername: string;
-  playerTwoUsername: string
+  playerTwoUsername: string;
 }
 
-export async function createGame(dto: CreateGameDto, accessToken: string,): Promise<string> {
+export async function createGame(
+  dto: CreateGameDto,
+  accessToken: string,
+): Promise<string> {
   const response = await fetch("http://localhost:3000/games", {
     method: "POST",
     headers: {
@@ -41,5 +45,5 @@ export async function createGame(dto: CreateGameDto, accessToken: string,): Prom
 
   const data = await response.json();
 
-  return data.gameId
+  return data.gameId;
 }
