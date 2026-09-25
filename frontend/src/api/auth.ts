@@ -1,60 +1,73 @@
-const backend_url = import.meta.env.VITE_BACKEND_URL
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 
 export interface SignupDto {
-    username: string;
-    email: string;
-    password: string;
+  username: string;
+  email: string;
+  password: string;
 }
 
 export interface LoginDto {
-    username: string;
-    password: string;
+  username: string;
+  password: string;
 }
 
 export interface LoginResponse {
-    accessToken: string;
+  accessToken: string;
 }
 export async function signup(dto: SignupDto) {
-    const response = await fetch(backend_url + "/auth/signup", {
-        method: "POST", headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dto),
-    });
+  const response = await fetch(backend_url + "/auth/signup", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(dto),
+  });
 
-    if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-    }
-    return
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  return;
 }
 
 export async function login(dto: LoginDto): Promise<LoginResponse> {
-    const response = await fetch(backend_url + "/auth/login", {
-        method: "POST",
-        credentials: 'include',
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dto),
-    });
+  const response = await fetch(backend_url + "/auth/login", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(dto),
+  });
 
-    if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-    }
-    const data = await response.json();
-    return data;
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  const data = await response.json();
+  return data;
 }
 
 export async function refreshAccessToken() {
-    const response = await fetch(backend_url + "/auth/refresh", {
-        method: 'POST',
-        credentials: 'include',
-    })
-    if (!response.ok) {
-        const body = await response.text();
-        console.log('refresh error body:', body);
-        throw new Error('Unable to refresh session');
-    }
-    const data = await response.json();
-    return data.accessToken;
+  const response = await fetch(backend_url + "/auth/refresh", {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    console.log("refresh error body:", body);
+    throw new Error("Unable to refresh session");
+  }
+  const data = await response.json();
+  return data.accessToken;
+}
+
+export async function getUsername(accessToken: string): Promise<string> {
+  const response = await fetch(backend_url + "/auth/me", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (!response.ok) throw new Error("Unable to retrieve user informations");
+  const data = await response.json();
+  return data.username;
 }
