@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import Board from "../components/board";
 import { Box, Button } from "@mui/material";
@@ -7,6 +7,7 @@ import DialogEndGame from "../components/DialogEndGame";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
 import { socket } from "../socket";
+import { refreshAccessToken } from "../api/auth";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 
@@ -40,7 +41,7 @@ type GameError = {
 function GamePage() {
   const navigate = useNavigate();
   const { gameId } = useParams();
-  const { accessToken, username } = useAuth();
+  const { accessToken, setAccessToken, username } = useAuth();
 
   const [position, setPosition] = useState<Position>({});
   const [moves, setMoves] = useState<Move[]>([]);
@@ -48,9 +49,12 @@ function GamePage() {
   const [result, setResult] = useState<string | null>(null);
   const [color, setColor] = useState<Color | null>(null);
 
+  const hasTriedToRefreshAccessToken = useRef(false);
+
   useEffect(() => {
     function handleConnect() {
       socket.emit("game.join", { gameId });
+      hasTriedToRefreshAccessToken.current = false;
     }
 
     function handleState(game: Game) {
@@ -78,13 +82,43 @@ function GamePage() {
       }
     }
 
-    async function handleError(error: GameError) {
+    async function handleConnectionError(error: Error) {
+      const connectionError = error as Error & {
+        data?: {
+          status_code: number;
+          message: string;
+        };
+      };
+      if (connectionError.data?.status_code !== 401) {
+        console.log(connectionError.message);
+        return;
+      }
+      // error 401: unauthorized access
+      if (hasTriedToRefreshAccessToken.current) {
+        // if already tried fall back to login
+        navigate("/auth");
+        return;
+      }
+      hasTriedToRefreshAccessToken.current = true;
+      try {
+        const tk = await refreshAccessToken();
+        setAccessToken(tk);
+      } catch {
+        navigate("/auth");
+        return;
+      }
+    }
+
+    function handleError(error: GameError) {
       console.log(error.message);
     }
+
+    if (!accessToken) return;
 
     socket.auth = { token: accessToken };
 
     socket.on("connect", handleConnect);
+    socket.on("connect_error", handleConnectionError);
     socket.on("game.state", handleState);
     socket.on("game.error", handleError);
 
@@ -92,6 +126,7 @@ function GamePage() {
 
     return () => {
       socket.off("connect", handleConnect);
+      socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
       socket.off("game.error", handleError);
       socket.disconnect();
