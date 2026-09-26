@@ -94,7 +94,7 @@ export class GamesService {
           game.state !== GameState.ready &&
           game.state !== GameState.running
         ) {
-          throw new ConflictException("The game is not running.");
+          throw new ConflictException("The game is not running."); // 409
         }
 
         const whiteToMove: Boolean = game.currentFen.split(" ")[1] === "w";
@@ -120,7 +120,7 @@ export class GamesService {
           );
         } catch (error) {
           if (error instanceof IllegalMoveError) {
-            throw new ConflictException(error.message);
+            throw new ConflictException(error.message); // 409
           }
           throw error;
         }
@@ -155,7 +155,7 @@ export class GamesService {
       if ((error as { code?: string })?.code === "P2002") {
         throw new ConflictException(
           "The game state changed while applying this move. Please retry.",
-        );
+        ); // 409
       }
       throw error;
     }
