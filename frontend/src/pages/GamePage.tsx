@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import Board from "../components/board";
 import { Box, Button } from "@mui/material";
@@ -49,12 +49,9 @@ function GamePage() {
   const [result, setResult] = useState<string | null>(null);
   const [color, setColor] = useState<Color | null>(null);
 
-  const hasTriedToRefreshAccessToken = useRef(false);
-
   useEffect(() => {
     function handleConnect() {
       socket.emit("game.join", { gameId });
-      hasTriedToRefreshAccessToken.current = false;
     }
 
     function handleState(game: Game) {
@@ -123,13 +120,6 @@ function GamePage() {
         console.log(connectionError.message);
         return;
       }
-      // error 401: unauthorized access
-      if (hasTriedToRefreshAccessToken.current) {
-        // if already tried fall back to login
-        navigate("/auth");
-        return;
-      }
-      hasTriedToRefreshAccessToken.current = true;
       try {
         const tk = await refreshAccessToken();
         setAccessToken(tk);
@@ -139,11 +129,21 @@ function GamePage() {
       }
     }
 
-    function handleError(error: GameError) {
-      console.log(error.message);
+    async function handleError(error: GameError) {
+      if (error.status_code !== 401) {
+        console.log(error.message);
+        return;
+      }
+      try {
+        const tk = await refreshAccessToken();
+        setAccessToken(tk);
+      } catch {
+        navigate("/auth");
+        return;
+      }
     }
 
-    if (!accessToken) return;
+    // if (!accessToken) return;
 
     socket.auth = { token: accessToken };
 

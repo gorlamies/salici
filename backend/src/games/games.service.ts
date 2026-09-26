@@ -21,7 +21,7 @@ export class GamesService {
   constructor(
     private readonly chessService: ChessService,
     private readonly prismaService: PrismaService,
-  ) {}
+  ) { }
 
   async createGame(body: CreateGameDto): Promise<{ gameId: string }> {
     const fen = this.chessService.createInitialPosition();

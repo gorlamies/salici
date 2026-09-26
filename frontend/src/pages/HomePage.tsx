@@ -34,6 +34,7 @@ function HomePage() {
     setAccessToken(tk)
   }
 
+
   return (
     <Box
       sx={{
@@ -54,7 +55,7 @@ function HomePage() {
           <Button onClick={() => setMenuState("createGame")} variant="contained"> new game</Button>
           <Button onClick={() => navigate("/auth")} variant="contained"> login</Button>
           <Button onClick={() => console.log(accessToken)} variant="contained"> test token</Button>
-          <Button onClick={refresh} variant="contained"> refresh token</Button>
+          <Button onClick={() => refresh()} variant="contained"> refresh token</Button>
         </Stack>
       </Fade>
 

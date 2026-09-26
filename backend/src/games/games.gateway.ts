@@ -30,7 +30,7 @@ export class GamesGateway implements OnGatewayInit {
   constructor(
     private readonly gamesService: GamesService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   // executed for every new connection
   afterInit(server: Server) {
