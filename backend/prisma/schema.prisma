@@ -9,9 +9,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum GameState {
+  ready
+  running
+  aborted
+  white_win
+  black_win
+  white_resigned
+  black_resigned
+  white_timeout
+  black_timeout
+  draw
+  stalemate
+  insufficient_material
+  threefold_repetition
+  fivefold_repetition
+  fifty_move_rule
+  seventy_five_move_rule
+}
+
 model Game {
   id         String   @id @default(cuid())
-  state      String   @default("idle")
+  state      GameState @default(ready)
   initialFen String
   currentFen String
   createdAt  DateTime @default(now())
