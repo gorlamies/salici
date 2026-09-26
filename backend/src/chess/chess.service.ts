@@ -95,6 +95,11 @@ export class ChessService {
       isCheck: chess.isCheck(),
       isCheckmate: chess.isCheckmate(),
       isStalemate: chess.isStalemate(),
+      isInsufficientMaterial: chess.isInsufficientMaterial(),
+      isThreefoldRepetition: chess.isThreefoldRepetition(),
+      isFivefoldRepetition: false, // TODO
+      isDrawByFiftyMoves: chess.isDrawByFiftyMoves(),
+      isDrawBySeventyfiveMoves: false, // TODO
       isDraw: chess.isDraw(),
       isGameOver: chess.isGameOver(),
     };
