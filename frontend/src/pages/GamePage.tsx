@@ -66,7 +66,7 @@ function GamePage() {
       setMoves(game.moves);
 
       setGameOver(game.finishedAt !== null);
-      // set result
+
       switch (game.state) {
         case "white_win":
           setResult("White wins");
@@ -74,8 +74,38 @@ function GamePage() {
         case "black_win":
           setResult("Black wins");
           break;
+        case "white_resigned":
+          setResult("White resigned");
+          break;
+        case "black_resigned":
+          setResult("Black resigned");
+          break;
+        case "white_timeout":
+          setResult("White ran out of time");
+          break;
+        case "black_timeout":
+          setResult("Black ran out of time");
+          break;
         case "draw":
           setResult("Draw");
+          break;
+        case "stalemate":
+          setResult("Stalemate");
+          break;
+        case "insufficient_material":
+          setResult("Draw for insufficient material");
+          break;
+        case "threefold_repetition":
+          setResult("Draw for threefold repetition");
+          break;
+        case "fivefold_repetition":
+          setResult("Draw for fivefold repetition");
+          break;
+        case "fifty_move_rule":
+          setResult("Draw for fifty-move rule");
+          break;
+        case "seventy_five_move_rule":
+          setResult("Draw for seventy-five-move rule");
           break;
         default:
           setResult(null);
