@@ -94,24 +94,31 @@ export class GamesGateway implements OnGatewayInit {
     }
   }
 
-  /*
-
   @SubscribeMessage("game.move")
   async handleMove(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: MovePayload,
   ) {
     if (!payload?.gameId || !payload?.move) {
-      client.emit("game.error", { message: "gameId and move are required" });
+      client.emit("game.error", {
+        status_code: 400,
+        message: "gameId and move are required",
+      });
       return;
     }
 
     try {
-      const game = await this.gamesService.applyMove(payload.gameId, payload.move);
+      const game = await this.gamesService.applyMove(
+        payload.gameId,
+        payload.move,
+        client.data.user.sub,
+      );
       this.server.to(gameRoom(payload.gameId)).emit("game.state", game);
     } catch (error) {
-      client.emit("game.error", toErrorPayload(error));
+      client.emit("game.error", {
+        status_code: 500,
+        message: "Internal server error",
+      });
     }
   }
-    */
 }
