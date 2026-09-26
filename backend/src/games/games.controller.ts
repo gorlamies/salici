@@ -18,12 +18,12 @@ import { GameDto } from "./dto/game.dto";
 import { CreateGameDto } from "./dto/createGame.dto";
 
 @Controller("games")
+@ApiBearerAuth()
 export class GamesController {
   constructor(private readonly gamesService: GamesService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   async createGame(
     @Req() request: AuthenticatedRequest,
     @Body() body: CreateGameDto,
