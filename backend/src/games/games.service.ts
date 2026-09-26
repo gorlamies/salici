@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -13,6 +14,7 @@ import { GameDto } from "./dto/game.dto";
 import { MoveDto } from "./dto/move.dto";
 import { CreateGameDto } from "./dto/createGame.dto";
 import { randomInt } from "crypto";
+import { GameState } from "../generated/prisma/enums";
 
 @Injectable()
 export class GamesService {
@@ -70,9 +72,11 @@ export class GamesService {
     return this.toGameDto(gameFields, moves);
   }
 
-  /*
-
-  async applyMove(id: number, input: ChessMoveInput): Promise<GameDto> {
+  async applyMove(
+    id: string,
+    input: ChessMoveInput,
+    mover_username: string,
+  ): Promise<GameDto> {
     if (!input?.from || !input?.to) {
       throw new BadRequestException("Both 'from' and 'to' are required.");
     }
@@ -85,8 +89,20 @@ export class GamesService {
           throw new NotFoundException(`Game ${id} not found`);
         }
 
-        if (!game.running) {
-          throw new ConflictException("The game is already finished.");
+        // moves are accepted only before the first move (ready) or during the game (running)
+        if (
+          game.state !== GameState.ready &&
+          game.state !== GameState.running
+        ) {
+          throw new ConflictException("The game is not running.");
+        }
+
+        const whiteToMove: Boolean = game.currentFen.split(" ")[1] === "w";
+        if (
+          mover_username !==
+          (whiteToMove ? game.whitePlayerUsername : game.blackPlayerUsername)
+        ) {
+          throw new ForbiddenException("Unauthorized move");
         }
 
         // the full history is needed to detect rules that depend on the past (threefold repetition), so the game is replayed from its first position.
@@ -97,7 +113,11 @@ export class GamesService {
 
         let applied: AppliedChessMove;
         try {
-          applied = this.chessService.applyMove(game.initialFen, input, previousMoves.map((previousMove) => previousMove.san));
+          applied = this.chessService.applyMove(
+            game.initialFen,
+            input,
+            previousMoves.map((previousMove) => previousMove.san),
+          );
         } catch (error) {
           if (error instanceof IllegalMoveError) {
             throw new ConflictException(error.message);
@@ -124,13 +144,12 @@ export class GamesService {
           where: { id },
           data: {
             currentFen: applied.fenAfter,
-            running: !applied.isGameOver,
-            result: this.resolveResult(applied),
+            state: this.resolveState(applied),
             finishedAt: applied.isGameOver ? new Date() : null,
           },
         });
 
-        return this.toGameDto(updatedGame, [...previousMoves, createdMove])
+        return this.toGameDto(updatedGame, [...previousMoves, createdMove]);
       });
     } catch (error) {
       if ((error as { code?: string })?.code === "P2002") {
@@ -142,17 +161,33 @@ export class GamesService {
     }
   }
 
-  private resolveResult(applied: AppliedChessMove): string | null {
+  // state of the game after a move; checkmate > forced draw
+  private resolveState(applied: AppliedChessMove): GameState {
     if (applied.isCheckmate) {
-      return applied.turnAfter === "b" ? "white_win" : "black_win";
+      return applied.turnAfter === "b"
+        ? GameState.white_win
+        : GameState.black_win;
     }
-    if (applied.isDraw) {
-      return "draw";
+    if (applied.isStalemate) {
+      return GameState.stalemate;
     }
-    return null;
+    if (applied.isInsufficientMaterial) {
+      return GameState.insufficient_material;
+    }
+    if (applied.isThreefoldRepetition) {
+      return GameState.threefold_repetition;
+    }
+    if (applied.isFivefoldRepetition) {
+      return GameState.fivefold_repetition;
+    }
+    if (applied.isDrawByFiftyMoves) {
+      return GameState.fifty_move_rule;
+    }
+    if (applied.isDrawBySeventyfiveMoves) {
+      return GameState.seventy_five_move_rule;
+    }
+    return GameState.running;
   }
-
-   */
 
   private toMoveDto(move: MoveModel): MoveDto {
     return {

@@ -6,7 +6,6 @@ import {
   Get,
   Post,
   Param,
-  ParseIntPipe,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -43,33 +42,36 @@ export class GamesController {
     return await this.gamesService.createGame(body);
   }
 
-  /*
-  
-    @Get(":id")
-    @ApiOkResponse({ type: GameDto })
-    getGame(@Param("id", ParseIntPipe) id: number) {
-      return this.gamesService.getGame(id);
-    }
-  
-    @ApiBody({
-      schema: {
-        type: "object",
-        required: ["from", "to"],
-        properties: {
-          from: { type: "string", example: "e2" },
-          to: { type: "string", example: "e4" },
-          promotion: { type: "string", enum: ["q", "r", "b", "n"], nullable: true },
+  @Get(":id")
+  @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ type: GameDto })
+  getGame(@Param("id") id: string) {
+    return this.gamesService.getGame(id);
+  }
+
+  @ApiBody({
+    schema: {
+      type: "object",
+      required: ["from", "to"],
+      properties: {
+        from: { type: "string", example: "e2" },
+        to: { type: "string", example: "e4" },
+        promotion: {
+          type: "string",
+          enum: ["q", "r", "b", "n"],
+          nullable: true,
         },
       },
-    })
-    @ApiOkResponse({ type: GameDto })
-    @Post(":id/moves")
-    applyMove(
-      @Param("id", ParseIntPipe) id: number,
-      @Body() input: ChessMoveInput,
-    ) {
-      return this.gamesService.applyMove(id, input);
-    }
-  
-    */
+    },
+  })
+  @ApiOkResponse({ type: GameDto })
+  @Post(":id/moves")
+  @UseGuards(JwtAuthGuard)
+  applyMove(
+    @Param("id") id: string,
+    @Body() input: ChessMoveInput,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.gamesService.applyMove(id, input, request.user.sub);
+  }
 }
