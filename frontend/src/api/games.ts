@@ -47,5 +47,22 @@ export async function createGame(
 
   const data = await response.json();
 
-  return data.gameId;
+  return data.id; // data has the whole server GameDto
 }
+
+export async function getOpenGames(accessToken: string | null): Promise<Game[]> {
+  const response = await fetch(backend_url + "/games", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return await response.json();
+}
+

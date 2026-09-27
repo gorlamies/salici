@@ -23,7 +23,7 @@ export class GamesService {
     private readonly prismaService: PrismaService,
   ) { }
 
-  async createGame(body: CreateGameDto): Promise<{ gameId: string }> {
+  async createGame(body: CreateGameDto): Promise<GameDto> {
     const fen = this.chessService.createInitialPosition();
 
     const users = await this.prismaService.user.findMany({
@@ -53,9 +53,7 @@ export class GamesService {
       },
     });
 
-    return {
-      gameId: game.id,
-    };
+    return this.toGameDto(game);
   }
 
   async getGame(id: string): Promise<GameDto> {
@@ -70,6 +68,33 @@ export class GamesService {
 
     const { moves, ...gameFields } = game;
     return this.toGameDto(gameFields, moves);
+  }
+
+  /**
+   * Finds the ready or running games for the given user.
+   * @param username the username of the player to search for
+   * @returns the list of games
+   */
+  async getOpenGames(username: string): Promise<GameDto[]> {
+    const games = await this.prismaService.game.findMany({
+      where: {
+        OR: [
+          { whitePlayerUsername: username },
+          { blackPlayerUsername: username },
+        ],
+        state: {
+          in: ["ready", "running"],
+        }
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: { moves: { orderBy: { moveNumber: "asc" } } },
+    });
+
+    return games.map(({ moves, ...gameFields }) =>
+      this.toGameDto(gameFields, moves),
+    );
   }
 
   async applyMove(
@@ -202,7 +227,10 @@ export class GamesService {
     };
   }
 
-  private toGameDto(game: GameModel, moves: MoveModel[]): GameDto {
+  private toGameDto(
+    game: GameModel,
+    moves: MoveModel[] = [],
+  ): GameDto {
     return {
       id: game.id,
       state: game.state,

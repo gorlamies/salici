@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { GamesService } from "./games.service";
+import { GamesGateway } from "./games.gateway";
 import { ChessMoveInput } from "../chess/chess.types";
 import { ApiBody, ApiBearerAuth, ApiOkResponse } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/auth.guard";
@@ -20,10 +21,11 @@ import { CreateGameDto } from "./dto/createGame.dto";
 @Controller("games")
 @ApiBearerAuth()
 export class GamesController {
-  constructor(private readonly gamesService: GamesService) {}
+  constructor(private readonly gamesService: GamesService, private readonly gamesGateway: GamesGateway) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ type: GameDto })
   async createGame(
     @Req() request: AuthenticatedRequest,
     @Body() body: CreateGameDto,
@@ -38,8 +40,20 @@ export class GamesController {
     if (body.playerOneUsername === body.playerTwoUsername) {
       throw new BadRequestException("The two players must be different"); // 400
     }
+    const game = await this.gamesService.createGame(body);
+    this.gamesGateway.notifyGameCreation(game)
 
-    return await this.gamesService.createGame(body);
+    return game;
+  }
+
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ type: [GameDto] })
+  async getOpenGames(
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return await this.gamesService.getOpenGames(request.user.sub);
   }
 
   @Get(":id")

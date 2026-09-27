@@ -2,6 +2,7 @@ import {
   ConnectedSocket,
   MessageBody,
   OnGatewayInit,
+  OnGatewayConnection,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -11,6 +12,7 @@ import { JwtService } from "@nestjs/jwt";
 import { ExtendedError, Server, Socket } from "socket.io";
 import { GamesService } from "./games.service";
 import { ChessMoveInput } from "../chess/chess.types";
+import { GameDto } from "./dto/game.dto";
 
 type JoinPayload = { gameId: string };
 type MovePayload = { gameId: string; move: ChessMoveInput };
@@ -19,11 +21,14 @@ type JwtPayload = { sub: string };
 function gameRoom(gameId: string): string {
   return `game:${gameId}`;
 }
+function userRoom(username: string): string {
+  return `user:${username}`;
+}
 
 @WebSocketGateway({
   cors: { origin: process.env.FRONTEND_URL ?? "http://localhost:5173" },
 })
-export class GamesGateway implements OnGatewayInit {
+export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
   @WebSocketServer()
   server!: Server;
 
@@ -57,6 +62,17 @@ export class GamesGateway implements OnGatewayInit {
         next(error);
       }
     });
+  }
+
+  async handleConnection(client: Socket) {
+    await client.join(userRoom(client.data.user.sub));
+  }
+
+  notifyGameCreation(game: GameDto) {
+    if (game.whitePlayerUsername)
+      this.server.to(userRoom(game.whitePlayerUsername)).emit("game.created", game);
+    if (game.blackPlayerUsername)
+      this.server.to(userRoom(game.blackPlayerUsername)).emit("game.created", game);
   }
 
   @SubscribeMessage("game.join")
