@@ -28,15 +28,19 @@ export interface CreateGameDto {
   playerTwoUsername: string;
 }
 
+type AuthFetch = (
+  url: string,
+  options?: RequestInit
+) => Promise<Response>
+
 export async function createGame(
   dto: CreateGameDto,
-  accessToken: string,
+  authFetch: AuthFetch
 ): Promise<string> {
-  const response = await fetch(backend_url + "/games", {
+  const response = await authFetch(backend_url + "/games", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
     },
     body: JSON.stringify(dto),
   });
@@ -46,16 +50,14 @@ export async function createGame(
   }
 
   const data = await response.json();
-
   return data.id; // data has the whole server GameDto
 }
 
-export async function getOpenGames(accessToken: string | null): Promise<Game[]> {
-  const response = await fetch(backend_url + "/games", {
+export async function getOpenGames(authFetch: AuthFetch): Promise<Game[]> {
+  const response = await authFetch(backend_url + "/games", {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
     },
   });
 

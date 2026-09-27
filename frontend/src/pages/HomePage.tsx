@@ -1,29 +1,32 @@
 import { Box, Button, Fade, Stack, TextField } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import type { MenuState } from "../types/menu";
 import { createGame, getOpenGames, type Game } from "../api/games"
 import { useAuth } from "../context/AuthContext";
-import { refreshAccessToken } from "../api/auth"
 import { socket } from "../socket";
 import GameNotifications from "../components/GameNotifications";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 
 function HomePage() {
 
-  const [menuState, setMenuState] = useState<MenuState>("main")
-  const [opponent, setOpponent] = useState<string>("")
-  const navigate = useNavigate();
-  const { accessToken, setAccessToken, username } = useAuth()
+  const [menuState, setMenuState] = useState<MenuState>("main");
+  const [opponent, setOpponent] = useState<string>("");
   const [openGames, setOpenGames] = useState<Game[]>([]);
+  const { accessToken, setAccessToken, username, refresh } = useAuth();
+  const navigate = useNavigate();
+  const authFetch = useAuthenticatedFetch();
+  const refreshAttempted = useRef(false);
+
 
   async function handleNewGameCreation() {
     try {
       const gameId = await createGame(
         {
-          playerOneUsername: username!, //test values
+          playerOneUsername: username!,
           playerTwoUsername: opponent,
         },
-        accessToken!,
+        authFetch
       );
 
       navigate(`/game/${gameId}`);
@@ -32,15 +35,12 @@ function HomePage() {
     }
   }
 
-  async function refresh() {
-    const tk = await refreshAccessToken()
-    setAccessToken(tk)
-  }
-
   useEffect(() => {
+    let disposed = false;
+
     async function handleConnect() {
       try {
-        setOpenGames(await getOpenGames(accessToken));
+        setOpenGames(await getOpenGames(authFetch));
       }
       catch {
         console.log("error while retrieving open games");
@@ -67,11 +67,22 @@ function HomePage() {
         console.log(connectionError.message);
         return;
       }
+
+      if (refreshAttempted.current) {
+        console.error("Authentication failed after refreshing.");
+        navigate("/auth")
+        return;
+      }
+
+      refreshAttempted.current = true;
       try {
-        const tk = await refreshAccessToken();
-        setAccessToken(tk);
+        const newToken = await refresh();
+        if (disposed) return;
+        setAccessToken(newToken)
+        socket.auth = { token: newToken };
+        socket.connect();
       } catch {
-        navigate("/auth");
+        if (disposed) return;
         return;
       }
     }
@@ -85,12 +96,13 @@ function HomePage() {
     socket.connect();
 
     return () => {
+      disposed = true;
       socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectionError);
       socket.off("game.created", handleGameCreated);
       socket.disconnect();
     };
-  }, [accessToken, navigate]);
+  }, [accessToken, navigate, refresh]);
 
 
   return (
@@ -117,8 +129,6 @@ function HomePage() {
           }}>
           <Button onClick={() => setMenuState("createGame")} variant="contained"> new game</Button>
           <Button onClick={() => navigate("/auth")} variant="contained"> login</Button>
-          <Button onClick={() => console.log(accessToken)} variant="contained"> test token</Button>
-          <Button onClick={() => refresh()} variant="contained"> refresh token</Button>
         </Stack>
       </Fade>
 

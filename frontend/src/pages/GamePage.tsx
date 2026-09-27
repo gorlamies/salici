@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import Board from "../components/board";
 import { Box, Button } from "@mui/material";
@@ -7,10 +7,8 @@ import DialogEndGame from "../components/DialogEndGame";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
 import { socket } from "../socket";
-import { refreshAccessToken } from "../api/auth";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
-
 export function parseFen(fen: string): Position {
   const positionFen = fen.trim().split(/\s+/)[0];
   const ranksFen = positionFen.split("/");
@@ -32,7 +30,6 @@ export function parseFen(fen: string): Position {
   });
   return position;
 }
-
 type GameError = {
   status_code: number;
   message: string;
@@ -41,7 +38,8 @@ type GameError = {
 function GamePage() {
   const navigate = useNavigate();
   const { gameId } = useParams();
-  const { accessToken, setAccessToken, username } = useAuth();
+  const { accessToken, username, refresh } = useAuth();
+  const refreshAttempted = useRef(false);
 
   const [position, setPosition] = useState<Position>({});
   const [moves, setMoves] = useState<Move[]>([]);
@@ -49,8 +47,14 @@ function GamePage() {
   const [result, setResult] = useState<string | null>(null);
   const [color, setColor] = useState<Color | null>(null);
 
+
+
+
   useEffect(() => {
+    let disposed = false;
+
     function handleConnect() {
+      refreshAttempted.current = false;
       socket.emit("game.join", { gameId });
     }
 
@@ -120,48 +124,43 @@ function GamePage() {
         console.log(connectionError.message);
         return;
       }
+
+      if (refreshAttempted.current) {
+        console.error("Authentication failed after refreshing.");
+        navigate("/auth")
+        return;
+      }
+
+      refreshAttempted.current = true;
       try {
-        const tk = await refreshAccessToken();
-        setAccessToken(tk);
+        const newToken = await refresh();
+        if (disposed) return;
+        socket.auth = { token: newToken };
+        socket.connect();
       } catch {
-        navigate("/auth");
+        if (disposed) return;
         return;
       }
     }
-
-    async function handleError(error: GameError) {
-      if (error.status_code !== 401) {
-        console.log(error.message);
-        return;
-      }
-      try {
-        const tk = await refreshAccessToken();
-        setAccessToken(tk);
-      } catch {
-        navigate("/auth");
-        return;
-      }
-    }
-
-    // if (!accessToken) return;
 
     socket.auth = { token: accessToken };
 
     socket.on("connect", handleConnect);
     socket.on("connect_error", handleConnectionError);
     socket.on("game.state", handleState);
-    socket.on("game.error", handleError);
+    //socket.on("game.error", handleError);
 
     socket.connect();
 
     return () => {
+      disposed = true;
       socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
-      socket.off("game.error", handleError);
+      //socket.off("game.error", handleError);
       socket.disconnect();
     };
-  }, [gameId, accessToken, username, navigate]);
+  }, [gameId, accessToken, username, navigate, refresh]);
 
   function handleMove(from: SquareName, to: SquareName) {
     socket.emit("game.move", {
