@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import Board from "../components/board";
-import { Box, Button } from "@mui/material";
+import { Alert, Box, Button } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
 import DialogEndGame from "../components/DialogEndGame";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
@@ -30,35 +30,27 @@ export function parseFen(fen: string): Position {
   });
   return position;
 }
-type GameError = {
-  status_code: number;
-  message: string;
-};
 
 function GamePage() {
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { accessToken, username, refresh } = useAuth();
   const refreshAttempted = useRef(false);
-
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [position, setPosition] = useState<Position>({});
   const [moves, setMoves] = useState<Move[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [color, setColor] = useState<Color | null>(null);
 
-
-
-
   useEffect(() => {
-    let disposed = false;
-
     function handleConnect() {
       refreshAttempted.current = false;
       socket.emit("game.join", { gameId });
     }
 
     function handleState(game: Game) {
+      setErrorMessage(null);
       setPosition(parseFen(game.currentFen));
 
       if (game.whitePlayerUsername === username) setColor("W");
@@ -133,14 +125,14 @@ function GamePage() {
 
       refreshAttempted.current = true;
       try {
-        const newToken = await refresh();
-        if (disposed) return;
-        socket.auth = { token: newToken };
-        socket.connect();
+        await refresh();
       } catch {
-        if (disposed) return;
         return;
       }
+    }
+
+    function handleError(error: { message: string }) {
+      setErrorMessage(error.message);
     }
 
     socket.auth = { token: accessToken };
@@ -148,16 +140,15 @@ function GamePage() {
     socket.on("connect", handleConnect);
     socket.on("connect_error", handleConnectionError);
     socket.on("game.state", handleState);
-    //socket.on("game.error", handleError);
+    socket.on("game.error", handleError);
 
     socket.connect();
 
     return () => {
-      disposed = true;
       socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
-      //socket.off("game.error", handleError);
+      socket.off("game.error", handleError);
       socket.disconnect();
     };
   }, [gameId, accessToken, username, navigate, refresh]);
@@ -171,6 +162,11 @@ function GamePage() {
 
   return (
     <>
+      {errorMessage && (
+        <Alert severity="error" onClose={() => setErrorMessage(null)}>
+          {errorMessage}
+        </Alert>
+      )}
       <Box
         sx={{
           display: "flex",
