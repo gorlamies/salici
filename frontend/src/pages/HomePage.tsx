@@ -125,7 +125,6 @@ function HomePage() {
       </Fade>
 
 
-
       <Fade in={menuState === "createGame"} timeout={500}>
         <Stack spacing={2}
           sx={{
@@ -137,12 +136,9 @@ function HomePage() {
             onChange={(event) => setOpponent(event.target.value)}
           />
           <Button onClick={handleNewGameCreation} variant="contained"> Create Game</Button>
+          <Button onClick={() => setMenuState("main")} variant="contained">Back</Button>
         </Stack>
       </Fade>
-
-
-
-
     </Box >
   )
 }
