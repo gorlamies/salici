@@ -1,30 +1,79 @@
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayInit,
+  OnGatewayConnection,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from "@nestjs/websockets";
-import { Server, Socket } from "socket.io";
+import { HttpException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { ExtendedError, Server, Socket } from "socket.io";
 import { GamesService } from "./games.service";
 import { ChessMoveInput } from "../chess/chess.types";
-import { toErrorPayload } from "../common/filters/all-exceptions.filter";
+import { GameDto } from "./dto/game.dto";
 
-type JoinPayload = { gameId: number };
-type MovePayload = { gameId: number; move: ChessMoveInput };
+type JoinPayload = { gameId: string };
+type MovePayload = { gameId: string; move: ChessMoveInput };
+type JwtPayload = { sub: string };
 
-function gameRoom(gameId: number): string {
+function gameRoom(gameId: string): string {
   return `game:${gameId}`;
+}
+function userRoom(username: string): string {
+  return `user:${username}`;
 }
 
 @WebSocketGateway({
   cors: { origin: process.env.FRONTEND_URL ?? "http://localhost:5173" },
 })
-export class GamesGateway {
+export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly gamesService: GamesService) {}
+  constructor(
+    private readonly gamesService: GamesService,
+    private readonly jwtService: JwtService,
+  ) { }
+
+  // executed for every new connection
+  afterInit(server: Server) {
+    server.use(async (socket, next) => {
+      const token: unknown = socket.handshake.auth?.token;
+      const error: ExtendedError = new Error("Unauthorized access");
+      error.data = {
+        status_code: 401,
+        message: "Unauthorized access",
+      };
+
+      if (typeof token !== "string" || token === "") {
+        next(error);
+        return;
+      }
+
+      try {
+        const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+          secret: process.env.JWT_ACCESS_SECRET!,
+        });
+        socket.data.user = payload;
+        next();
+      } catch {
+        next(error);
+      }
+    });
+  }
+
+  async handleConnection(client: Socket) {
+    await client.join(userRoom(client.data.user.sub));
+  }
+
+  notifyGameCreation(game: GameDto) {
+    if (game.whitePlayerUsername)
+      this.server.to(userRoom(game.whitePlayerUsername)).emit("game.created", game);
+    if (game.blackPlayerUsername)
+      this.server.to(userRoom(game.blackPlayerUsername)).emit("game.created", game);
+  }
 
   @SubscribeMessage("game.join")
   async handleJoin(
@@ -32,7 +81,10 @@ export class GamesGateway {
     @MessageBody() payload: JoinPayload,
   ) {
     if (!payload?.gameId) {
-      client.emit("game.error", { message: "gameId is required" });
+      client.emit("game.error", {
+        status_code: 400,
+        message: "gameId is required",
+      });
       return;
     }
 
@@ -41,7 +93,20 @@ export class GamesGateway {
       await client.join(gameRoom(payload.gameId));
       client.emit("game.state", game);
     } catch (error) {
-      client.emit("game.error", toErrorPayload(error));
+      if (error instanceof HttpException) {
+        client.emit("game.error", {
+          status_code: error.getStatus(),
+          message: error.message,
+        });
+        return;
+      }
+
+      // no info for client, see server logs for details
+      console.error(error);
+      client.emit("game.error", {
+        status_code: 500,
+        message: "Internal server error",
+      });
     }
   }
 
@@ -51,15 +116,25 @@ export class GamesGateway {
     @MessageBody() payload: MovePayload,
   ) {
     if (!payload?.gameId || !payload?.move) {
-      client.emit("game.error", { message: "gameId and move are required" });
+      client.emit("game.error", {
+        status_code: 400,
+        message: "gameId and move are required",
+      });
       return;
     }
 
     try {
-      const game = await this.gamesService.applyMove(payload.gameId, payload.move);
+      const game = await this.gamesService.applyMove(
+        payload.gameId,
+        payload.move,
+        client.data.user.sub,
+      );
       this.server.to(gameRoom(payload.gameId)).emit("game.state", game);
     } catch (error) {
-      client.emit("game.error", toErrorPayload(error));
+      client.emit("game.error", {
+        status_code: 500,
+        message: "Internal server error",
+      });
     }
   }
 }

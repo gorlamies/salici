@@ -9,35 +9,64 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum GameState {
+  ready
+  running
+  aborted
+  white_win
+  black_win
+  white_resigned
+  black_resigned
+  white_timeout
+  black_timeout
+  draw
+  stalemate
+  insufficient_material
+  threefold_repetition
+  fivefold_repetition
+  fifty_move_rule
+  seventy_five_move_rule
+}
+
 model Game {
-  id Int @id @default(autoincrement())
-  running Boolean @default(true)
+  id         String   @id @default(cuid())
+  state      GameState @default(ready)
   initialFen String
   currentFen String
-  result String?
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
   finishedAt DateTime?
+
+  whitePlayerUsername String?
+  blackPlayerUsername String?
+
+  whitePlayer User? @relation("WhitePlayer", fields: [whitePlayerUsername], references: [username])
+  blackPlayer User? @relation("BlackPlayer", fields: [blackPlayerUsername], references: [username])
+
   moves Move[]
 }
 
 model Move {
-  id Int @id @default(autoincrement())
-  from String
-  to String
-  promotion String?
+  id         Int      @id @default(autoincrement())
+  from       String
+  to         String
+  promotion  String?
   moveNumber Int
-  san String
-  uci String
-  fenAfter String
-  createdAt DateTime @default(now())
-  gameId Int
-  game Game @relation(fields: [gameId], references: [id])
+  san        String
+  uci        String
+  fenAfter   String
+  createdAt  DateTime @default(now())
+
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id])
 
   @@unique([gameId, moveNumber])
 }
 
 model User {
-  username      String @id
-  email         String @unique
-  passwordhash  String
+  username     String @id
+  email        String @unique
+  passwordhash String
+
+  gamesAsWhite Game[] @relation("WhitePlayer")
+  gamesAsBlack Game[] @relation("BlackPlayer")
 }

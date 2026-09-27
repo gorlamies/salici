@@ -1,3 +1,5 @@
+const backend_url = import.meta.env.VITE_BACKEND_URL;
+
 export type Move = {
   moveNumber: number;
   from: string;
@@ -10,21 +12,52 @@ export type Move = {
 };
 
 export type Game = {
-  id: number;
-  running: boolean;
+  id: string;
+  state: string;
   initialFen: string;
   currentFen: string;
-  result: string | null;
   createdAt: string;
   finishedAt: string | null;
+  whitePlayerUsername: string | null;
+  blackPlayerUsername: string | null;
   moves: Move[];
 };
 
-export async function createGame(accessToken: string): Promise<Game> {
-  const response = await fetch("http://localhost:3000/games", {
+export interface CreateGameDto {
+  playerOneUsername: string;
+  playerTwoUsername: string;
+}
+
+type AuthFetch = (
+  url: string,
+  options?: RequestInit
+) => Promise<Response>
+
+export async function createGame(
+  dto: CreateGameDto,
+  authFetch: AuthFetch
+): Promise<string> {
+  const response = await authFetch(backend_url + "/games", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(dto),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.id; // data has the whole server GameDto
+}
+
+export async function getOpenGames(authFetch: AuthFetch): Promise<Game[]> {
+  const response = await authFetch(backend_url + "/games", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
     },
   });
 
@@ -32,5 +65,6 @@ export async function createGame(accessToken: string): Promise<Game> {
     throw new Error(`Request failed: ${response.status}`);
   }
 
-  return response.json();
+  return await response.json();
 }
+

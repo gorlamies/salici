@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
-import Square from "./Square"
-import MoveHistory from "./MoveHistory"
+import Square from "./Square";
+import MoveHistory from "./MoveHistory";
 import type { SquareName, Position, FenPiece, Color } from "../types/chess";
 import { useState } from "react";
 import type { Move } from "../api/games";
@@ -21,53 +21,49 @@ const pieceImages: Record<FenPiece, string> = {
   K: "/pieces/KingWhite.svg",
   r: "/pieces/RookBlack.svg",
   R: "/pieces/RookWhite.svg",
-}
+};
 
 interface BoardProps {
-  color: Color
-  position: Position
-  moves: Move[]
-  errorMessage: string | null
-  onMove: (from: SquareName, to: SquareName) => void
+  color: Color | null;
+  position: Position;
+  moves: Move[];
+  onMove: (from: SquareName, to: SquareName) => void;
 }
 
-function Board({ color, position, moves, errorMessage, onMove }: BoardProps) {
-
+function Board({ color, position, moves, onMove }: BoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<SquareName | null>(null);
 
   function canSelectPiece(piece: FenPiece | undefined): Boolean {
+    if (!piece) return false;
+    if (!color) return false;
 
-    if (!piece) return false
+    const isPieceUppercase = piece === piece.toUpperCase();
+    const isPlayerUppercase = color === color.toUpperCase();
 
-    const isPieceUppercase = piece === piece.toUpperCase()
-    const isPlayerUppercase = color === color.toUpperCase()
-
-    return isPieceUppercase === isPlayerUppercase
+    return isPieceUppercase === isPlayerUppercase;
   }
 
   function handleSquareClick(name: SquareName) {
-
     // deselect on double click on same square
     if (selectedSquare == name) {
-      setSelectedSquare(null)
-      return
+      setSelectedSquare(null);
+      return;
     }
 
     // no square selected
     if (selectedSquare == null) {
       if (canSelectPiece(position[name])) {
-        setSelectedSquare(name)
+        setSelectedSquare(name);
       }
-      return
+      return;
     }
 
     // second click: ask the parent to apply this move, don't touch the board ourselves
     onMove(selectedSquare, name);
-    setSelectedSquare(null)
+    setSelectedSquare(null);
   }
 
   function renderBoard() {
-
     return ranks.map((rank, rowIndex) =>
       files.map((file, columnIndex) => {
         const name: SquareName = `${file}${rank}`;
@@ -84,15 +80,12 @@ function Board({ color, position, moves, errorMessage, onMove }: BoardProps) {
             orientation={color}
           />
         );
-      })
+      }),
     );
   }
 
   return (
     <Box>
-      {errorMessage && (
-        <Box sx={{ color: "error.main", mb: 1 }}>{errorMessage}</Box>
-      )}
       <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
         <Box
           sx={{
@@ -111,4 +104,4 @@ function Board({ color, position, moves, errorMessage, onMove }: BoardProps) {
   );
 }
 
-export default Board
+export default Board;

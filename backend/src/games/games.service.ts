@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -11,27 +12,51 @@ import { IllegalMoveError } from "../chess/chess.errors";
 import type { GameModel, MoveModel } from "../generated/prisma/models";
 import { GameDto } from "./dto/game.dto";
 import { MoveDto } from "./dto/move.dto";
+import { CreateGameDto } from "./dto/createGame.dto";
+import { randomInt } from "crypto";
+import { GameState } from "../generated/prisma/enums";
 
 @Injectable()
 export class GamesService {
   constructor(
     private readonly chessService: ChessService,
     private readonly prismaService: PrismaService,
-  ) {}
+  ) { }
 
-  async createGame(): Promise<GameDto> {
+  async createGame(body: CreateGameDto): Promise<GameDto> {
     const fen = this.chessService.createInitialPosition();
+
+    const users = await this.prismaService.user.findMany({
+      where: {
+        username: {
+          in: [body.playerOneUsername, body.playerTwoUsername],
+        },
+      },
+    });
+
+    if (users.length !== 2) {
+      throw new BadRequestException("One or both players do not exist");
+    }
+
+    const playerOneIsWhite = randomInt(2) === 0;
+
     const game = await this.prismaService.game.create({
       data: {
         initialFen: fen,
         currentFen: fen,
+        whitePlayerUsername: playerOneIsWhite
+          ? body.playerOneUsername
+          : body.playerTwoUsername,
+        blackPlayerUsername: playerOneIsWhite
+          ? body.playerTwoUsername
+          : body.playerOneUsername,
       },
     });
 
-    return this.toGameDto(game, []);
+    return this.toGameDto(game);
   }
 
-  async getGame(id: number): Promise<GameDto> {
+  async getGame(id: string): Promise<GameDto> {
     const game = await this.prismaService.game.findUnique({
       where: { id },
       include: { moves: { orderBy: { moveNumber: "asc" } } },
@@ -45,7 +70,38 @@ export class GamesService {
     return this.toGameDto(gameFields, moves);
   }
 
-  async applyMove(id: number, input: ChessMoveInput): Promise<GameDto> {
+  /**
+   * Finds the ready or running games for the given user.
+   * @param username the username of the player to search for
+   * @returns the list of games
+   */
+  async getOpenGames(username: string): Promise<GameDto[]> {
+    const games = await this.prismaService.game.findMany({
+      where: {
+        OR: [
+          { whitePlayerUsername: username },
+          { blackPlayerUsername: username },
+        ],
+        state: {
+          in: ["ready", "running"],
+        }
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: { moves: { orderBy: { moveNumber: "asc" } } },
+    });
+
+    return games.map(({ moves, ...gameFields }) =>
+      this.toGameDto(gameFields, moves),
+    );
+  }
+
+  async applyMove(
+    id: string,
+    input: ChessMoveInput,
+    mover_username: string,
+  ): Promise<GameDto> {
     if (!input?.from || !input?.to) {
       throw new BadRequestException("Both 'from' and 'to' are required.");
     }
@@ -58,8 +114,20 @@ export class GamesService {
           throw new NotFoundException(`Game ${id} not found`);
         }
 
-        if (!game.running) {
-          throw new ConflictException("The game is already finished.");
+        // moves are accepted only before the first move (ready) or during the game (running)
+        if (
+          game.state !== GameState.ready &&
+          game.state !== GameState.running
+        ) {
+          throw new ConflictException("The game is not running."); // 409
+        }
+
+        const whiteToMove: Boolean = game.currentFen.split(" ")[1] === "w";
+        if (
+          mover_username !==
+          (whiteToMove ? game.whitePlayerUsername : game.blackPlayerUsername)
+        ) {
+          throw new ForbiddenException("Unauthorized move");
         }
 
         // the full history is needed to detect rules that depend on the past (threefold repetition), so the game is replayed from its first position.
@@ -70,10 +138,14 @@ export class GamesService {
 
         let applied: AppliedChessMove;
         try {
-          applied = this.chessService.applyMove(game.initialFen, input, previousMoves.map((previousMove) => previousMove.san));
+          applied = this.chessService.applyMove(
+            game.initialFen,
+            input,
+            previousMoves.map((previousMove) => previousMove.san),
+          );
         } catch (error) {
           if (error instanceof IllegalMoveError) {
-            throw new ConflictException(error.message);
+            throw new ConflictException(error.message); // 409
           }
           throw error;
         }
@@ -97,32 +169,49 @@ export class GamesService {
           where: { id },
           data: {
             currentFen: applied.fenAfter,
-            running: !applied.isGameOver,
-            result: this.resolveResult(applied),
+            state: this.resolveState(applied),
             finishedAt: applied.isGameOver ? new Date() : null,
           },
         });
 
-        return this.toGameDto(updatedGame, [...previousMoves, createdMove])
+        return this.toGameDto(updatedGame, [...previousMoves, createdMove]);
       });
     } catch (error) {
       if ((error as { code?: string })?.code === "P2002") {
         throw new ConflictException(
           "The game state changed while applying this move. Please retry.",
-        );
+        ); // 409
       }
       throw error;
     }
   }
 
-  private resolveResult(applied: AppliedChessMove): string | null {
+  // state of the game after a move; checkmate > forced draw
+  private resolveState(applied: AppliedChessMove): GameState {
     if (applied.isCheckmate) {
-      return applied.turnAfter === "b" ? "white_win" : "black_win";
+      return applied.turnAfter === "b"
+        ? GameState.white_win
+        : GameState.black_win;
     }
-    if (applied.isDraw) {
-      return "draw";
+    if (applied.isStalemate) {
+      return GameState.stalemate;
     }
-    return null;
+    if (applied.isInsufficientMaterial) {
+      return GameState.insufficient_material;
+    }
+    if (applied.isThreefoldRepetition) {
+      return GameState.threefold_repetition;
+    }
+    if (applied.isFivefoldRepetition) {
+      return GameState.fivefold_repetition;
+    }
+    if (applied.isDrawByFiftyMoves) {
+      return GameState.fifty_move_rule;
+    }
+    if (applied.isDrawBySeventyfiveMoves) {
+      return GameState.seventy_five_move_rule;
+    }
+    return GameState.running;
   }
 
   private toMoveDto(move: MoveModel): MoveDto {
@@ -138,13 +227,17 @@ export class GamesService {
     };
   }
 
-  private toGameDto(game: GameModel, moves: MoveModel[]): GameDto {
+  private toGameDto(
+    game: GameModel,
+    moves: MoveModel[] = [],
+  ): GameDto {
     return {
       id: game.id,
-      running: game.running,
+      state: game.state,
       initialFen: game.initialFen,
       currentFen: game.currentFen,
-      result: game.result,
+      whitePlayerUsername: game.whitePlayerUsername,
+      blackPlayerUsername: game.blackPlayerUsername,
       createdAt: game.createdAt,
       finishedAt: game.finishedAt,
       moves: moves.map((move) => this.toMoveDto(move)),

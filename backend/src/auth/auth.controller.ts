@@ -1,61 +1,78 @@
-import { Body, Controller, Post, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiBearerAuth } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { SignupDto } from "./dto/signup.dto";
 import { LoginDto } from "./dto/login.dto";
-import type { Response, Request } from 'express';
-
-
+import { JwtAuthGuard } from "./auth.guard";
+import type { AuthenticatedRequest } from "./auth.types";
+import type { Response, Request } from "express";
 
 @Controller("auth")
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
+  @Post("signup")
+  async signup(@Body() body: SignupDto) {
+    await this.authService.signup(body);
+  }
 
-    @Post("signup")
-    async signup(
-        @Body() body: SignupDto
-    ) { await this.authService.signup(body) }
+  @Post("login")
+  async login(
+    @Body() body: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const { accessToken, refreshToken } = await this.authService.login(body);
 
+    response.cookie("refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: false, // true in production with HTTPS
+      sameSite: "lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+    });
 
-    @Post("login")
-    async login(
-        @Body() body: LoginDto,
-        @Res({ passthrough: true }) response: Response
-    ) {
-        const { accessToken, refreshToken } = await this.authService.login(body)
+    return {
+      accessToken,
+    };
+  }
 
-        response.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: false, // true in production with HTTPS
-            sameSite: 'lax',
-            maxAge: 2 * 24 * 60 * 60 * 1000,
-        });
+  @Post("refresh")
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const oldRefreshToken = request.cookies["refresh_token"];
 
-        return {
-            accessToken,
-        };
+    const { accessToken, refreshToken } =
+      await this.authService.refresh(oldRefreshToken);
+
+    if (refreshToken) {
+      response.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: false, // true in production with HTTPS
+        sameSite: "lax",
+        maxAge: 2 * 24 * 60 * 60 * 1000,
+      });
     }
 
-    @Post("refresh")
-    async refresh(@Req() request: Request,
-        @Res({ passthrough: true }) response: Response) {
-        const oldRefreshToken = request.cookies['refresh_token']
+    return {
+      accessToken,
+    };
+  }
 
-        const { accessToken, refreshToken } = await this.authService.refresh(oldRefreshToken)
-
-        if (refreshToken) {
-            response.cookie('refresh_token', refreshToken, {
-                httpOnly: true,
-                secure: false, // true in production with HTTPS
-                sameSite: 'lax',
-                maxAge: 2 * 24 * 60 * 60 * 1000,
-            });
-        }
-
-        return {
-            accessToken,
-        };
-    }
-
-
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  me(@Req() request: AuthenticatedRequest): { username: string } {
+    return {
+      username: request.user.sub,
+    };
+  }
 }

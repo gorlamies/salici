@@ -3,10 +3,10 @@ import { MoveDto } from "./move.dto";
 
 export class GameDto {
   @ApiProperty()
-  id!: number;
+  id!: string;
 
   @ApiProperty()
-  running!: boolean;
+  state!: string;
 
   @ApiProperty()
   initialFen!: string;
@@ -14,14 +14,17 @@ export class GameDto {
   @ApiProperty()
   currentFen!: string;
 
-  @ApiProperty({ nullable: true, type: String })
-  result!: string | null;
-
   @ApiProperty()
   createdAt!: Date;
 
   @ApiProperty({ nullable: true, type: Date })
   finishedAt!: Date | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  whitePlayerUsername!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  blackPlayerUsername!: string | null;
 
   @ApiProperty({ type: [MoveDto] })
   moves!: MoveDto[];

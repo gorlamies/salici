@@ -1,37 +1,109 @@
-import { Box, Button, Fade, Stack } from "@mui/material";
-import { useState } from "react";
+import { Box, Button, Fade, Stack, TextField } from "@mui/material";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import type { MenuState } from "../types/menu";
-import { createGame } from "../api/games"
+import { createGame, getOpenGames, type Game } from "../api/games"
 import { useAuth } from "../context/AuthContext";
-import { refreshAccessToken } from "../api/auth"
+import { socket } from "../socket";
+import GameNotifications from "../components/GameNotifications";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 
 function HomePage() {
 
-  const [menuState, setMenuState] = useState<MenuState>("main")
-  const [time, setTime] = useState("")
+  const [menuState, setMenuState] = useState<MenuState>("main");
+  const [opponent, setOpponent] = useState<string>("");
+  const [openGames, setOpenGames] = useState<Game[]>([]);
+  const { accessToken, setAccessToken, username, refresh } = useAuth();
   const navigate = useNavigate();
-  const { accessToken, setAccessToken } = useAuth()
+  const authFetch = useAuthenticatedFetch();
+  const refreshAttempted = useRef(false);
+
 
   async function handleNewGameCreation() {
-    if(!accessToken) {
-      console.error("You must be logged in to create a game.")
-      return;
-    }
     try {
-      const game = await createGame(accessToken!)
-      navigate(`/game/${game.id}`)
-    }
-    catch (error) {
+      const gameId = await createGame(
+        {
+          playerOneUsername: username!,
+          playerTwoUsername: opponent,
+        },
+        authFetch
+      );
+
+      navigate(`/game/${gameId}`);
+    } catch (error) {
       console.error("Could not create new game:", error);
     }
-
   }
 
-  async function refresh() {
-    const tk = await refreshAccessToken()
-    setAccessToken(tk)
-  }
+  useEffect(() => {
+    let disposed = false;
+
+    async function handleConnect() {
+      try {
+        setOpenGames(await getOpenGames(authFetch));
+      }
+      catch {
+        console.log("error while retrieving open games");
+      }
+    }
+
+    function handleGameCreated(game: Game) {
+      // add the game if it's not already in
+      setOpenGames(prev =>
+        prev.some(g => g.id === game.id)
+          ? prev
+          : [game, ...prev],
+      );
+    }
+
+    async function handleConnectionError(error: Error) {
+      const connectionError = error as Error & {
+        data?: {
+          status_code: number;
+          message: string;
+        };
+      };
+      if (connectionError.data?.status_code !== 401) {
+        console.log(connectionError.message);
+        return;
+      }
+
+      if (refreshAttempted.current) {
+        console.error("Authentication failed after refreshing.");
+        navigate("/auth")
+        return;
+      }
+
+      refreshAttempted.current = true;
+      try {
+        const newToken = await refresh();
+        if (disposed) return;
+        setAccessToken(newToken)
+        socket.auth = { token: newToken };
+        socket.connect();
+      } catch {
+        if (disposed) return;
+        return;
+      }
+    }
+
+    socket.auth = { token: accessToken };
+
+    socket.on("connect", handleConnect);
+    socket.on("connect_error", handleConnectionError);
+    socket.on("game.created", handleGameCreated);
+
+    socket.connect();
+
+    return () => {
+      disposed = true;
+      socket.off("connect", handleConnect);
+      socket.off("connect_error", handleConnectionError);
+      socket.off("game.created", handleGameCreated);
+      socket.disconnect();
+    };
+  }, [accessToken, navigate, refresh]);
+
 
   return (
     <Box
@@ -41,8 +113,13 @@ function HomePage() {
         width: "100%",
         p: 3,
         boxSizing: "border-box",
+        position: "relative", // reference for the notifications bell
       }}
     >
+
+      <Box sx={{ position: "absolute", top: 8, right: 8 }}>
+        <GameNotifications games={openGames} username={username} />
+      </Box>
 
       <Fade in={menuState === "main"} timeout={500}>
         <Stack spacing={2}
@@ -52,8 +129,6 @@ function HomePage() {
           }}>
           <Button onClick={() => setMenuState("createGame")} variant="contained"> new game</Button>
           <Button onClick={() => navigate("/auth")} variant="contained"> login</Button>
-          <Button onClick={() => console.log(accessToken)} variant="contained"> test token</Button>
-          <Button onClick={refresh} variant="contained"> refresh token</Button>
         </Stack>
       </Fade>
 
@@ -64,28 +139,11 @@ function HomePage() {
           sx={{
             position: "absolute",
           }}>
-          <Stack direction="row" spacing={2}>
-            <Button
-              variant={time === "10 | 0" ? "contained" : "outlined"}
-              onClick={() => setTime("10 | 0")}
-            >
-              10 | 0
-            </Button>
 
-            <Button
-              variant={time === "5 | 0" ? "contained" : "outlined"}
-              onClick={() => setTime("5 | 0")}
-            >
-              5 | 0
-            </Button>
-
-            <Button
-              variant={time === "3 | 2" ? "contained" : "outlined"}
-              onClick={() => setTime("3 | 2")}
-            >
-              3 | 2
-            </Button>
-          </Stack>
+          <TextField
+            value={opponent}
+            onChange={(event) => setOpponent(event.target.value)}
+          />
           <Button onClick={handleNewGameCreation} variant="contained"> Create Game</Button>
         </Stack>
       </Fade>

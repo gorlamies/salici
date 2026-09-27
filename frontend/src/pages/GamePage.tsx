@@ -1,91 +1,166 @@
-import { useEffect, useState } from "react";
-import Board from "../components/board"
+import { useEffect, useState, useRef } from "react";
+import { useAuth } from "../context/AuthContext";
+import Board from "../components/board";
 import { Box, Button } from "@mui/material";
-import { useNavigate, useParams, useSearchParams } from "react-router";
-import DialogEndGame from "../components/DialogEndGame"
+import { useNavigate, useParams } from "react-router";
+import DialogEndGame from "../components/DialogEndGame";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
-import { socket } from "../socket"
+import { socket } from "../socket";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
-
 export function parseFen(fen: string): Position {
-
-  const positionFen = fen.trim().split(/\s+/)[0]
-  const ranksFen = positionFen.split("/")
+  const positionFen = fen.trim().split(/\s+/)[0];
+  const ranksFen = positionFen.split("/");
   const position: Position = {};
 
   ranksFen.forEach((rankText, rowIndex) => {
-
     const rank = 8 - rowIndex;
     let fileIndex = 0;
 
     for (const char of rankText) {
       if ("12345678".includes(char)) {
         fileIndex += Number(char);
-      }
-      else {
+      } else {
         const square = `${files[fileIndex]}${rank}` as SquareName;
         position[square] = char as FenPiece;
         fileIndex += 1;
       }
     }
-  })
-  return position
+  });
+  return position;
 }
-
-function resolveResultLabel(result: string | null): string {
-  switch (result) {
-    case "white_win":
-      return "White wins";
-    case "black_win":
-      return "Black wins";
-    case "draw":
-      return "Draw";
-    default:
-      return "";
-  }
-}
+type GameError = {
+  status_code: number;
+  message: string;
+};
 
 function GamePage() {
-  const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>();
-  const gameId = Number(id)
-  const [searchParams] = useSearchParams();
-  const color: Color = searchParams.get("color") === "w" ? "W" : "b";
+  const navigate = useNavigate();
+  const { gameId } = useParams();
+  const { accessToken, username, refresh } = useAuth();
+  const refreshAttempted = useRef(false);
 
   const [position, setPosition] = useState<Position>({});
   const [moves, setMoves] = useState<Move[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [color, setColor] = useState<Color | null>(null);
+
+
+
 
   useEffect(() => {
+    let disposed = false;
+
+    function handleConnect() {
+      refreshAttempted.current = false;
+      socket.emit("game.join", { gameId });
+    }
 
     function handleState(game: Game) {
       setPosition(parseFen(game.currentFen));
+
+      if (game.whitePlayerUsername === username) setColor("W");
+      else if (game.blackPlayerUsername === username) setColor("b");
+
       setMoves(game.moves);
-      setErrorMessage(null);
-      setGameOver(!game.running);
-      setResult(game.result);
+
+      setGameOver(game.finishedAt !== null);
+
+      switch (game.state) {
+        case "white_win":
+          setResult("White wins");
+          break;
+        case "black_win":
+          setResult("Black wins");
+          break;
+        case "white_resigned":
+          setResult("White resigned");
+          break;
+        case "black_resigned":
+          setResult("Black resigned");
+          break;
+        case "white_timeout":
+          setResult("White ran out of time");
+          break;
+        case "black_timeout":
+          setResult("Black ran out of time");
+          break;
+        case "draw":
+          setResult("Draw");
+          break;
+        case "stalemate":
+          setResult("Stalemate");
+          break;
+        case "insufficient_material":
+          setResult("Draw for insufficient material");
+          break;
+        case "threefold_repetition":
+          setResult("Draw for threefold repetition");
+          break;
+        case "fivefold_repetition":
+          setResult("Draw for fivefold repetition");
+          break;
+        case "fifty_move_rule":
+          setResult("Draw for fifty-move rule");
+          break;
+        case "seventy_five_move_rule":
+          setResult("Draw for seventy-five-move rule");
+          break;
+        default:
+          setResult(null);
+      }
     }
 
-    function handleError(error: { message: string }) {
-      setErrorMessage(error.message);
+    async function handleConnectionError(error: Error) {
+      const connectionError = error as Error & {
+        data?: {
+          status_code: number;
+          message: string;
+        };
+      };
+      if (connectionError.data?.status_code !== 401) {
+        console.log(connectionError.message);
+        return;
+      }
+
+      if (refreshAttempted.current) {
+        console.error("Authentication failed after refreshing.");
+        navigate("/auth")
+        return;
+      }
+
+      refreshAttempted.current = true;
+      try {
+        const newToken = await refresh();
+        if (disposed) return;
+        socket.auth = { token: newToken };
+        socket.connect();
+      } catch {
+        if (disposed) return;
+        return;
+      }
     }
 
+    socket.auth = { token: accessToken };
+
+    socket.on("connect", handleConnect);
+    socket.on("connect_error", handleConnectionError);
     socket.on("game.state", handleState);
-    socket.on("game.error", handleError);
+    //socket.on("game.error", handleError);
 
     socket.connect();
-    socket.emit("game.join", { gameId });
 
     return () => {
+      disposed = true;
+      socket.off("connect", handleConnect);
+      socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
-      socket.off("game.error", handleError);
+      //socket.off("game.error", handleError);
       socket.disconnect();
     };
-  }, [gameId]);
+  }, [gameId, accessToken, username, navigate, refresh]);
 
   function handleMove(from: SquareName, to: SquareName) {
     socket.emit("game.move", {
@@ -109,18 +184,15 @@ function GamePage() {
           color={color}
           position={position}
           moves={moves}
-          errorMessage={errorMessage}
           onMove={handleMove}
         />
       </Box>
-      <Button
-        variant="contained"
-        onClick={() => navigate("/")}>
+      <Button variant="contained" onClick={() => navigate("/")}>
         homepage
       </Button>
-      <DialogEndGame open={gameOver} result={resolveResultLabel(result)} />
+      <DialogEndGame open={gameOver} result={result} />
     </>
-  )
+  );
 }
 
-export default GamePage
+export default GamePage;
