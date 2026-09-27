@@ -1,4 +1,4 @@
-import { Box, Button, Stack, Typography, TextField } from "@mui/material";
+import { Box, Button, Stack, Typography, TextField, Fade } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { signup, login } from "../api/auth";
@@ -60,57 +60,61 @@ function AuthPage() {
         mx: "auto",
       }}
     >
-      <Stack spacing={2}>
-        <Typography variant="h5">
-          {mode === "login" ? "Login" : "Sign up"}
-        </Typography>
 
-        <TextField
-          label="Username"
-          value={username}
-          onChange={(event) => setUser(event.target.value)}
-          required
-          fullWidth
-        />
+      <Fade key={mode} in timeout={500}>
+        <Stack spacing={2}>
+          <Typography variant="h5">
+            {mode === "login" ? "Login" : "Sign up"}
+          </Typography>
 
-        {mode === "signup" && (
           <TextField
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            label="Username"
+            value={username}
+            onChange={(event) => setUser(event.target.value)}
             required
             fullWidth
           />
-        )}
 
-        <TextField
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          fullWidth
-        />
+          {mode === "signup" && (
+            <TextField
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              fullWidth
+            />
+          )}
 
-        {error && <Typography color="error">{error}</Typography>}
+          <TextField
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            fullWidth
+          />
 
-        <Button type="submit" variant="contained" disabled={loading}>
-          {loading ? "Loading..." : mode === "login" ? "Login" : "Sign up"}
-        </Button>
+          {error && <Typography color="error">{error}</Typography>}
 
-        <Button
-          type="button"
-          variant="text"
-          onClick={() =>
-            setMode((current) => (current === "login" ? "signup" : "login"))
-          }
-        >
-          {mode === "login"
-            ? "Create an account"
-            : "Already have an account? Login"}
-        </Button>
-      </Stack>
+          <Button type="submit" variant="contained" disabled={loading}>
+            {loading ? "Loading..." : mode === "login" ? "Login" : "Sign up"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="contained"
+            onClick={() =>
+              setMode((current) => (current === "login" ? "signup" : "login"))
+            }
+          >
+            {mode === "login"
+              ? "Create an account"
+              : "Already have an account? Login"}
+          </Button>
+          <Button variant="contained" onClick={() => navigate("/")}> Back To Menu</Button>
+        </Stack>
+      </Fade>
     </Box>
   );
 }

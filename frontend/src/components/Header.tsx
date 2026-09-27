@@ -1,10 +1,13 @@
 import { AppBar, Toolbar, Box, Stack, Typography } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router";
 
 export default function Header() {
     const { accessToken, username } = useAuth();
     const isLoggedIn = Boolean(accessToken);
+
+    const navigate = useNavigate()
 
     return (
         <AppBar
@@ -18,6 +21,7 @@ export default function Header() {
                     src="/logo.svg"
                     alt="Salici"
                     sx={{ height: 40, width: "auto", display: "block" }}
+                    onClick={() => navigate("/")}
                 />
 
                 <Stack direction="row" spacing={1} >
