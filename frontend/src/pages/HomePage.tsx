@@ -13,7 +13,7 @@ function HomePage() {
   const [menuState, setMenuState] = useState<MenuState>("main");
   const [opponent, setOpponent] = useState<string>("");
   const [openGames, setOpenGames] = useState<Game[]>([]);
-  const { accessToken, setAccessToken, username, refresh } = useAuth();
+  const { accessToken, username, refresh } = useAuth();
   const navigate = useNavigate();
   const authFetch = useAuthenticatedFetch();
   const refreshAttempted = useRef(false);
@@ -36,8 +36,6 @@ function HomePage() {
   }
 
   useEffect(() => {
-    let disposed = false;
-
     async function handleConnect() {
       try {
         setOpenGames(await getOpenGames(authFetch));
@@ -76,13 +74,8 @@ function HomePage() {
 
       refreshAttempted.current = true;
       try {
-        const newToken = await refresh();
-        if (disposed) return;
-        setAccessToken(newToken)
-        socket.auth = { token: newToken };
-        socket.connect();
+        await refresh();
       } catch {
-        if (disposed) return;
         return;
       }
     }
@@ -96,7 +89,6 @@ function HomePage() {
     socket.connect();
 
     return () => {
-      disposed = true;
       socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectionError);
       socket.off("game.created", handleGameCreated);
