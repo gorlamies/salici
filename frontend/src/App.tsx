@@ -4,6 +4,7 @@ import { Box, Fade } from "@mui/material"
 import HomePage from "./pages/HomePage"
 import GamePage from "./pages/GamePage"
 import AuthPage from "./pages/AuthPage"
+import ProfilePage from "./pages/ProfilePage"
 import Header from "./components/Header"
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/game/:gameId" element={<GamePage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="profile/:UserId" element={<ProfilePage />} />
           </Routes>
         </Box>
       </Fade>
