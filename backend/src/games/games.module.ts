@@ -5,9 +5,10 @@ import { ChessModule } from '../chess/chess.module';
 import { DatabaseModule } from '../database/database.module';
 import { GamesGateway } from './games.gateway'
 import { AuthModule } from '../auth/auth.module';
+import { ClockModule } from '../clock/clock.module';
 
 @Module({
-  imports: [ChessModule, DatabaseModule, AuthModule],
+  imports: [ChessModule, DatabaseModule, AuthModule, ClockModule],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway],
 })

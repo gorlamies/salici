@@ -26,6 +26,18 @@ export class GameDto {
   @ApiProperty({ nullable: true, type: String })
   blackPlayerUsername!: string | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  initialTimeMs!: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  incrementMs!: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  whiteRemainingMs!: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  blackRemainingMs!: number | null;
+
   @ApiProperty({ type: [MoveDto] })
   moves!: MoveDto[];
 }

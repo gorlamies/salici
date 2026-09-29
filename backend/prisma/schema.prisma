@@ -43,6 +43,12 @@ model Game {
   blackPlayer User? @relation("BlackPlayer", fields: [blackPlayerUsername], references: [username])
 
   moves Move[]
+
+  initialTimeMs Int?
+  incrementMs Int?
+  whiteRemainingMs Int?
+  blackRemainingMs Int?
+  turnStartedAt DateTime?
 }
 
 model Move {
@@ -58,6 +64,8 @@ model Move {
 
   gameId String
   game   Game   @relation(fields: [gameId], references: [id])
+
+  remainingMsAfter Int?
 
   @@unique([gameId, moveNumber])
 }
