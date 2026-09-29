@@ -1,28 +1,42 @@
-import { Box, Button } from "@mui/material"
+import { Box, Button, Typography, Stack } from "@mui/material"
 import { useNavigate, useParams, } from "react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { getProfileInfo } from "../api/profile"
+import { useAuth } from "../context/AuthContext";
 
 
 export default function ProfilePage() {
 
     const navigate = useNavigate();
     const { UserId } = useParams();
+    const { username } = useAuth();
     const authFetch = useAuthenticatedFetch();
+
+
+    const [data, setData] = useState<{
+        username: string;
+        email: string;
+    }>({
+        username: "",
+        email: "",
+    });
 
     useEffect(() => {
         if (!UserId) return;
 
         async function loadProfile() {
             try {
-                const data = await getProfileInfo(
+                const response = await getProfileInfo(
                     {
                         username: UserId!,
                     },
                     authFetch
                 );
-                console.log(data)
+                setData({
+                    username: response.username,
+                    email: response.email,
+                });
 
             } catch (error) {
 
@@ -33,6 +47,7 @@ export default function ProfilePage() {
         }
         loadProfile();
     }, [UserId, authFetch, navigate])
+
 
     return (
         <Box
@@ -45,8 +60,17 @@ export default function ProfilePage() {
                 position: "relative", // reference for the notifications bell
             }}
         >
-            <Button variant="contained" onClick={() => navigate("/")}> Logout</Button>
+            <Stack spacing={2}>
+                <Typography>
+                    Username: {data.username}
+                </Typography>
 
+                <Typography>
+                    Email: {data.email}
+                </Typography>
+
+                {username === UserId ? (<Button variant="contained" onClick={() => navigate("/")}> Logout</Button>) : (null)}
+            </Stack>
         </Box>
     )
 }

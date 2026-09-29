@@ -9,11 +9,16 @@ type AuthFetch = (
     options?: RequestInit
 ) => Promise<Response>
 
+type ProfileData = {
+    username: string;
+    email: string;
+};
+
 export async function getProfileInfo(
     dto: ProfileDto,
     authFetch: AuthFetch
-): Promise<string> {
-    const response = await authFetch(backend_url + "/profile" + dto.username, {
+): Promise<ProfileData> {
+    const response = await authFetch(backend_url + "/profile/" + dto.username, {
         method: "GET",
         headers: {
             "Content-Type": "application/json"
@@ -24,6 +29,5 @@ export async function getProfileInfo(
         throw new Error(`Request failed: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data
+    return await response.json();
 }
