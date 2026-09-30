@@ -1,4 +1,4 @@
-import { Box, Button, Fade, Stack, TextField } from "@mui/material";
+import { Box, Button, Fade, Stack, TextField, ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import type { MenuState } from "../types/menu";
@@ -13,6 +13,9 @@ function HomePage() {
   const [menuState, setMenuState] = useState<MenuState>("main");
   const [opponent, setOpponent] = useState<string>("");
   const [openGames, setOpenGames] = useState<Game[]>([]);
+  const [time, setTime] = useState<string>("");
+  const [gameMinutesMs, setGameMinutesMs] = useState<number | null>(null);
+  const [gameIncrementMs, setGameIncrementMs] = useState<number | null>(null);
   const { accessToken, username, refresh } = useAuth();
   const navigate = useNavigate();
   const authFetch = useAuthenticatedFetch();
@@ -25,6 +28,8 @@ function HomePage() {
         {
           playerOneUsername: username!,
           playerTwoUsername: opponent,
+          initialTimeMs: gameMinutesMs,
+          incrementMs: gameIncrementMs,
         },
         authFetch
       );
@@ -135,6 +140,48 @@ function HomePage() {
             value={opponent}
             onChange={(event) => setOpponent(event.target.value)}
           />
+
+          <ToggleButtonGroup
+            value={time}
+            exclusive
+            onChange={(_, value: string | null) => {
+              setTime(value ?? "");
+
+              if (value === null) {
+                setGameMinutesMs(null);
+                setGameIncrementMs(null);
+                return;
+              }
+
+              const [minutes, incrementSeconds] = value.split("+").map(Number);
+
+              setGameMinutesMs(minutes * 60 * 1000);
+              setGameIncrementMs(incrementSeconds * 1000);
+            }}
+            aria-label="Game duration"
+            color="primary"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 1,
+              "& .MuiToggleButtonGroup-grouped": {
+                margin: 0,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "4px",
+              },
+            }}
+          >
+            {[
+              "1 + 0", "1 + 1", "2 + 1",
+              "3 + 0", "3 + 2", "5 + 0",
+              "10 + 0", "10 + 5", "15 + 0",
+            ].map((duration) => (
+              <ToggleButton key={duration} value={duration}>
+                {duration}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
           <Button onClick={handleNewGameCreation} variant="contained"> Create Game</Button>
           <Button onClick={() => setMenuState("main")} variant="contained">Back</Button>
         </Stack>
