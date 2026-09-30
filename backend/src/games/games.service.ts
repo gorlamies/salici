@@ -13,6 +13,7 @@ import type { GameModel, MoveModel } from "../generated/prisma/models";
 import { GameDto } from "./dto/game.dto";
 import { MoveDto } from "./dto/move.dto";
 import { CreateGameDto } from "./dto/createGame.dto";
+import { CreateGameResponseDto } from "./dto/createGameResponse.dto";
 import { randomInt } from "crypto";
 import { GameState } from "../generated/prisma/enums";
 import { ClockService } from "../clock/clock.service";
@@ -28,7 +29,7 @@ export class GamesService {
     private readonly clockService: ClockService,
   ) { }
 
-  async createGame(body: CreateGameDto): Promise<GameDto> {
+  async createGame(body: CreateGameDto): Promise<CreateGameResponseDto> {
     const fen = this.chessService.createInitialPosition();
 
     const users = await this.prismaService.user.findMany({
@@ -74,7 +75,7 @@ export class GamesService {
       },
     });
 
-    return this.toGameDto(game);
+    return { gameId: game.id };
   }
 
   async getGame(id: string): Promise<GameDto> {

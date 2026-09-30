@@ -101,7 +101,7 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
         return;
       }
 
-      // no info for client, see server logs for details
+      // fallback for errors
       console.error(error);
       client.emit("game.error", {
         status_code: 500,
