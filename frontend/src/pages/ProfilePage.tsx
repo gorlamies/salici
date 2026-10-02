@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { getProfileInfo } from "../api/profile"
 import { useAuth } from "../context/AuthContext";
+import { logout } from "../api/auth"
 
 
 export default function ProfilePage() {
 
     const navigate = useNavigate();
     const { UserId } = useParams();
-    const { username } = useAuth();
+    const { username, setAccessToken } = useAuth();
     const authFetch = useAuthenticatedFetch();
-
 
     const [data, setData] = useState<{
         username: string;
@@ -48,6 +48,12 @@ export default function ProfilePage() {
         loadProfile();
     }, [UserId, authFetch, navigate])
 
+    async function handleLogout() {
+        await logout()
+        setAccessToken(null)
+        //navigate("/")
+    }
+
 
     return (
         <Box
@@ -69,7 +75,7 @@ export default function ProfilePage() {
                     Email: {data.email}
                 </Typography>
 
-                {username === UserId ? (<Button variant="contained" onClick={() => navigate("/")}> Logout</Button>) : (null)}
+                {username === UserId ? (<Button variant="contained" onClick={handleLogout}> Logout</Button>) : (null)}
             </Stack>
         </Box>
     )

@@ -14,6 +14,12 @@ export interface LoginDto {
 export interface LoginResponse {
   accessToken: string;
 }
+
+type AuthFetch = (
+  url: string,
+  options?: RequestInit
+) => Promise<Response>
+
 export async function signup(dto: SignupDto) {
   const response = await fetch(backend_url + "/auth/signup", {
     method: "POST",
@@ -70,4 +76,18 @@ export async function getUsername(accessToken: string): Promise<string> {
   if (!response.ok) throw new Error("Unable to retrieve user informations");
   const data = await response.json();
   return data.username;
+}
+
+export async function logout() {
+  const response = await fetch(backend_url + "/auth/logout", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json"
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed:`);
+  }
+  return
 }

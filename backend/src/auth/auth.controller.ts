@@ -17,7 +17,7 @@ import type { Response, Request } from "express";
 
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post("signup")
   async signup(@Body() body: SignupDto) {
@@ -75,4 +75,18 @@ export class AuthController {
       username: request.user.sub,
     };
   }
+
+  @Post("logout")
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie("refresh_token", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // true in production with HTTPS
+      path: "/",
+    });
+    return {
+      message: "Logged out",
+    };
+  }
+
 }
