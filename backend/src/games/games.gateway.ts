@@ -75,6 +75,12 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
       this.server.to(userRoom(game.blackPlayerUsername)).emit("game.created", game);
   }
 
+  notifyGameState(gameId: string, game: GameDto) {
+    this.server
+      .to(gameRoom(gameId))
+      .emit("game.state", game);
+  }
+
   @SubscribeMessage("game.join")
   async handleJoin(
     @ConnectedSocket() client: Socket,
