@@ -1,11 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Alert, Box, Button, Stack } from "@mui/material";
+import { Alert, Box, } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
 import { socket } from "../socket";
-import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 
 import Board from "../components/board";
 import DialogEndGame from "../components/DialogEndGame";
@@ -48,10 +47,17 @@ function GamePage() {
   const [color, setColor] = useState<Color | null>(null);
   const [blackTimeMs, setBlackTimeMs] = useState<number | null>(null)
   const [whiteTimeMs, setWhiteTimeMs] = useState<number | null>(null)
+  const [activeColor, setActiveColor] = useState<"w" | "b">("w");
+  const [clocksStarted, setClocksStarted] = useState(false);
 
 
-  const myTime = color === "b" ? blackTimeMs : whiteTimeMs;
-  const opponentTime = color === "b" ? whiteTimeMs : blackTimeMs;
+  const bottomColor = color === "b" ? "b" : "w";
+
+  const bottomTime = bottomColor === "w" ? whiteTimeMs : blackTimeMs;
+  const topTime = bottomColor === "w" ? blackTimeMs : whiteTimeMs;
+
+  const bottomRunning = clocksStarted && activeColor === bottomColor;
+  const topRunning = clocksStarted && activeColor !== bottomColor;
 
   useEffect(() => {
     function handleConnect() {
@@ -69,6 +75,9 @@ function GamePage() {
       setBlackTimeMs(game.blackRemainingMs)
       setWhiteTimeMs(game.whiteRemainingMs)
       setMoves(game.moves);
+
+      setActiveColor(game.currentFen.trim().split(/\s+/)[1] as "w" | "b");
+      setClocksStarted(game.moves.length >= 2 && game.finishedAt === null);
 
       setGameOver(game.finishedAt !== null);
 
@@ -190,14 +199,14 @@ function GamePage() {
           boxSizing: "border-box",
         }}
       >
-        <Timer time={opponentTime} running={false} />
+        <Timer time={topTime} running={topRunning} />
         <Board
           color={color}
           position={position}
           moves={moves}
           onMove={handleMove}
         />
-        <Timer time={myTime} running={false} />
+        <Timer time={bottomTime} running={bottomRunning} />
       </Box>
       <DialogEndGame open={gameOver} result={result} />
     </>
