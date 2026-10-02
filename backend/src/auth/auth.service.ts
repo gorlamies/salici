@@ -14,7 +14,7 @@ export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async signup(dto: SignupDto) {
     try {
