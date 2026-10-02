@@ -47,6 +47,7 @@ function GamePage() {
   const [color, setColor] = useState<Color | null>(null);
   const [blackTimeMs, setBlackTimeMs] = useState<number | null>(null)
   const [whiteTimeMs, setWhiteTimeMs] = useState<number | null>(null)
+  const [firstMoveMs, setFirstMoveMs] = useState<number | null>(null)
   const [activeColor, setActiveColor] = useState<"w" | "b">("w");
   const [clocksStarted, setClocksStarted] = useState(false);
 
@@ -74,6 +75,7 @@ function GamePage() {
       else (setColor("W"))
       setBlackTimeMs(game.blackRemainingMs)
       setWhiteTimeMs(game.whiteRemainingMs)
+      setFirstMoveMs(game.firstMoveRemainingMs)
       setMoves(game.moves);
 
       setActiveColor(game.currentFen.trim().split(/\s+/)[1] as "w" | "b");
@@ -120,6 +122,9 @@ function GamePage() {
           break;
         case "seventy_five_move_rule":
           setResult("Draw for seventy-five-move rule");
+          break;
+        case "aborted":
+          setResult("Game aborted");
           break;
         default:
           setResult(null);
@@ -199,6 +204,7 @@ function GamePage() {
           boxSizing: "border-box",
         }}
       >
+        {firstMoveMs !== null && <Timer time={firstMoveMs} running />}
         <Timer time={topTime} running={topRunning} />
         <Board
           color={color}

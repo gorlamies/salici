@@ -24,6 +24,7 @@ export type Game = {
   incrementMs: number | null;
   whiteRemainingMs: number | null;
   blackRemainingMs: number | null;
+  firstMoveRemainingMs: number | null;
   moves: Move[];
 };
 

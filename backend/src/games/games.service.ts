@@ -319,6 +319,22 @@ export class GamesService {
     let whiteRemainingMs = game.whiteRemainingMs;
     let blackRemainingMs = game.blackRemainingMs;
 
+    // time left to the side to move for its first move
+    let firstMoveRemainingMs: number | null = null;
+    if (
+      game.state === GameState.ready &&
+      game.turnStartedAt !== null &&
+      game.initialTimeMs !== null &&
+      game.incrementMs !== null
+    ) {
+      firstMoveRemainingMs = Math.max(
+        0,
+        game.turnStartedAt.getTime() +
+        this.clockService.firstMoveAllowedMs(game.initialTimeMs, game.incrementMs) -
+        Date.now(),
+      );
+    }
+
     // during the game the clock of the side to move is running: send its value
     if (
       game.state === GameState.running &&
@@ -348,6 +364,7 @@ export class GamesService {
       incrementMs: game.incrementMs,
       whiteRemainingMs,
       blackRemainingMs,
+      firstMoveRemainingMs,
       moves: moves.map((move) => this.toMoveDto(move)),
     };
   }
