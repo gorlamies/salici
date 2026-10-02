@@ -1,8 +1,6 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
-  BadRequestException,
   Get,
   Post,
   Param,
@@ -30,10 +28,13 @@ export class GamesController {
   @ApiOkResponse({ type: CreateGameResponseDto })
   async createGame(@Body() body: CreateGameDto): Promise<CreateGameResponseDto> {
 
-    const game = await this.gamesService.createGame(body);
-    //this.gamesGateway.notifyGameCreation(game)
+    const createdGame = await this.gamesService.createGame(body);
 
-    return game;
+    // the players are notified with the whole game infos
+    const game = await this.gamesService.getGame(createdGame.gameId);
+    this.gamesGateway.notifyGameCreation(game);
+
+    return createdGame;
   }
 
   @Get(":id")
