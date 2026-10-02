@@ -5,14 +5,11 @@ import {
 @Injectable()
 export class ClockService {
 
-    /** Calculate how much time the player has to make its first move.
-     * @param initialTimeMs initial time
-     * @param incrementMs increment
-     * 
+    /** Define how much time the player has to make its first move.
+    * @returns how many milliseconds the player has to make its first move
     */
     firstMoveAllowedMs(initialTimeMs: number, incrementMs: number): number {
-        const expectedDuration = initialTimeMs + 40 * incrementMs;
-        return Math.floor(expectedDuration / 10);
+        return 30000; // 30 sec
     }
 
     /**
