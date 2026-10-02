@@ -29,7 +29,20 @@ export class GamesService {
     private readonly clockService: ClockService,
   ) { }
 
-  async createGame(body: CreateGameDto): Promise<CreateGameResponseDto> {
+  async createGame(
+    body: CreateGameDto,
+    creatorUsername: string,
+  ): Promise<CreateGameResponseDto> {
+    if (
+      creatorUsername !== body.playerOneUsername &&
+      creatorUsername !== body.playerTwoUsername
+    ) {
+      throw new ForbiddenException("You can only create a game you play in"); // 403
+    }
+
+    if (body.playerOneUsername === body.playerTwoUsername) {
+      throw new BadRequestException("The two players must be different"); // 400
+    }
     const fen = this.chessService.createInitialPosition();
 
     const users = await this.prismaService.user.findMany({

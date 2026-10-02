@@ -25,9 +25,11 @@ export class GamesController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiOkResponse({ type: CreateGameResponseDto })
-  async createGame(@Body() body: CreateGameDto): Promise<CreateGameResponseDto> {
-
-    const createdGame = await this.gamesService.createGame(body);
+  async createGame(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: CreateGameDto,
+  ): Promise<CreateGameResponseDto> {
+    const createdGame = await this.gamesService.createGame(body, request.user.sub);
 
     // the players are notified with the whole game infos
     const game = await this.gamesService.getGame(createdGame.gameId);
