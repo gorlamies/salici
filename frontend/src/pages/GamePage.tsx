@@ -1,12 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import Board from "../components/board";
-import { Alert, Box, Button } from "@mui/material";
+import { Alert, Box, } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
-import DialogEndGame from "../components/DialogEndGame";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
 import { socket } from "../socket";
+
+import Board from "../components/board";
+import DialogEndGame from "../components/DialogEndGame";
+import Timer from "../components/Timer"
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 export function parseFen(fen: string): Position {
@@ -32,6 +34,7 @@ export function parseFen(fen: string): Position {
 }
 
 function GamePage() {
+
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { accessToken, username, refresh } = useAuth();
@@ -42,6 +45,20 @@ function GamePage() {
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [color, setColor] = useState<Color | null>(null);
+  const [blackTimeMs, setBlackTimeMs] = useState<number | null>(null)
+  const [whiteTimeMs, setWhiteTimeMs] = useState<number | null>(null)
+  const [firstMoveMs, setFirstMoveMs] = useState<number | null>(null)
+  const [activeColor, setActiveColor] = useState<"w" | "b">("w");
+  const [clocksStarted, setClocksStarted] = useState(false);
+
+
+  const bottomColor = color === "b" ? "b" : "w";
+
+  const bottomTime = bottomColor === "w" ? whiteTimeMs : blackTimeMs;
+  const topTime = bottomColor === "w" ? blackTimeMs : whiteTimeMs;
+
+  const bottomRunning = clocksStarted && activeColor === bottomColor;
+  const topRunning = clocksStarted && activeColor !== bottomColor;
 
   useEffect(() => {
     function handleConnect() {
@@ -55,8 +72,14 @@ function GamePage() {
 
       if (game.whitePlayerUsername === username) setColor("W");
       else if (game.blackPlayerUsername === username) setColor("b");
-
+      else (setColor("W"))
+      setBlackTimeMs(game.blackRemainingMs)
+      setWhiteTimeMs(game.whiteRemainingMs)
+      setFirstMoveMs(game.firstMoveRemainingMs)
       setMoves(game.moves);
+
+      setActiveColor(game.currentFen.trim().split(/\s+/)[1] as "w" | "b");
+      setClocksStarted(game.moves.length >= 2 && game.finishedAt === null);
 
       setGameOver(game.finishedAt !== null);
 
@@ -99,6 +122,9 @@ function GamePage() {
           break;
         case "seventy_five_move_rule":
           setResult("Draw for seventy-five-move rule");
+          break;
+        case "aborted":
+          setResult("Game aborted");
           break;
         default:
           setResult(null);
@@ -170,22 +196,24 @@ function GamePage() {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "center",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
           width: "100%",
           p: 3,
           boxSizing: "border-box",
         }}
       >
+        {firstMoveMs !== null && <Timer time={firstMoveMs} running />}
+        <Timer time={topTime} running={topRunning} />
         <Board
           color={color}
           position={position}
           moves={moves}
           onMove={handleMove}
         />
+        <Timer time={bottomTime} running={bottomRunning} />
       </Box>
-      <Button variant="contained" onClick={() => navigate("/")}>
-        homepage
-      </Button>
       <DialogEndGame open={gameOver} result={result} />
     </>
   );

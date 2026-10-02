@@ -1,8 +1,6 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
-  BadRequestException,
   Get,
   Post,
   Param,
@@ -11,39 +9,40 @@ import {
 } from "@nestjs/common";
 import { GamesService } from "./games.service";
 import { GamesGateway } from "./games.gateway";
-import { ChessMoveInput } from "../chess/chess.types";
-import { ApiBody, ApiBearerAuth, ApiOkResponse } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOkResponse } from "@nestjs/swagger";
+import { AuthenticatedRequest } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/auth.guard";
-import type { AuthenticatedRequest } from "../auth/auth.types";
 import { GameDto } from "./dto/game.dto";
 import { CreateGameDto } from "./dto/createGame.dto";
+import { CreateGameResponseDto } from "./dto/createGameResponse.dto";
 
 @Controller("games")
 @ApiBearerAuth()
 export class GamesController {
   constructor(private readonly gamesService: GamesService, private readonly gamesGateway: GamesGateway) { }
 
+
   @Post()
   @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({ type: GameDto })
+  @ApiOkResponse({ type: CreateGameResponseDto })
   async createGame(
     @Req() request: AuthenticatedRequest,
     @Body() body: CreateGameDto,
-  ) {
-    if (
-      request.user.sub !== body.playerOneUsername &&
-      request.user.sub !== body.playerTwoUsername
-    ) {
-      throw new ForbiddenException("You can only create a game you play in"); // 403
-    }
+  ): Promise<CreateGameResponseDto> {
+    const createdGame = await this.gamesService.createGame(body, request.user.sub);
 
-    if (body.playerOneUsername === body.playerTwoUsername) {
-      throw new BadRequestException("The two players must be different"); // 400
-    }
-    const game = await this.gamesService.createGame(body);
-    this.gamesGateway.notifyGameCreation(game)
+    // the players are notified with the whole game infos
+    const game = await this.gamesService.getGame(createdGame.gameId);
+    this.gamesGateway.notifyGameCreation(game);
 
-    return game;
+    return createdGame;
+  }
+
+  @Get(":id")
+  @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ type: GameDto })
+  async getGame(@Param("id") id: string): Promise<GameDto> {
+    return await this.gamesService.getGame(id);
   }
 
 
@@ -54,38 +53,5 @@ export class GamesController {
     @Req() request: AuthenticatedRequest,
   ) {
     return await this.gamesService.getOpenGames(request.user.sub);
-  }
-
-  @Get(":id")
-  @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({ type: GameDto })
-  getGame(@Param("id") id: string) {
-    return this.gamesService.getGame(id);
-  }
-
-  @ApiBody({
-    schema: {
-      type: "object",
-      required: ["from", "to"],
-      properties: {
-        from: { type: "string", example: "e2" },
-        to: { type: "string", example: "e4" },
-        promotion: {
-          type: "string",
-          enum: ["q", "r", "b", "n"],
-          nullable: true,
-        },
-      },
-    },
-  })
-  @ApiOkResponse({ type: GameDto })
-  @Post(":id/moves")
-  @UseGuards(JwtAuthGuard)
-  applyMove(
-    @Param("id") id: string,
-    @Body() input: ChessMoveInput,
-    @Req() request: AuthenticatedRequest,
-  ) {
-    return this.gamesService.applyMove(id, input, request.user.sub);
   }
 }

@@ -75,6 +75,12 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
       this.server.to(userRoom(game.blackPlayerUsername)).emit("game.created", game);
   }
 
+  notifyGameState(gameId: string, game: GameDto) {
+    this.server
+      .to(gameRoom(gameId))
+      .emit("game.state", game);
+  }
+
   @SubscribeMessage("game.join")
   async handleJoin(
     @ConnectedSocket() client: Socket,
@@ -101,7 +107,7 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
         return;
       }
 
-      // no info for client, see server logs for details
+      // fallback for errors
       console.error(error);
       client.emit("game.error", {
         status_code: 500,
@@ -131,6 +137,17 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
       );
       this.server.to(gameRoom(payload.gameId)).emit("game.state", game);
     } catch (error) {
+      // expected errors (403, 404, 409...)
+      if (error instanceof HttpException) {
+        client.emit("game.error", {
+          status_code: error.getStatus(),
+          message: error.message,
+        });
+        return;
+      }
+
+      // unexpected errors, see server logs
+      console.error(error);
       client.emit("game.error", {
         status_code: 500,
         message: "Internal server error",

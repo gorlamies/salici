@@ -24,4 +24,7 @@ export class MoveDto {
 
   @ApiProperty()
   createdAt!: Date;
+
+  @ApiProperty({ nullable: true, type: Number })
+  remainingMsAfter!: number | null;
 }
