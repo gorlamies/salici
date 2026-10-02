@@ -9,8 +9,7 @@ import {
 } from "@nestjs/common";
 import { GamesService } from "./games.service";
 import { GamesGateway } from "./games.gateway";
-import { ChessMoveInput } from "../chess/chess.types";
-import { ApiBody, ApiBearerAuth, ApiOkResponse } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOkResponse } from "@nestjs/swagger";
 import { AuthenticatedRequest } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/auth.guard";
 import { GameDto } from "./dto/game.dto";
@@ -52,31 +51,5 @@ export class GamesController {
     @Req() request: AuthenticatedRequest,
   ) {
     return await this.gamesService.getOpenGames(request.user.sub);
-  }
-
-  @ApiBody({
-    schema: {
-      type: "object",
-      required: ["from", "to"],
-      properties: {
-        from: { type: "string", example: "e2" },
-        to: { type: "string", example: "e4" },
-        promotion: {
-          type: "string",
-          enum: ["q", "r", "b", "n"],
-          nullable: true,
-        },
-      },
-    },
-  })
-  @ApiOkResponse({ type: GameDto })
-  @Post(":id/moves")
-  @UseGuards(JwtAuthGuard)
-  applyMove(
-    @Param("id") id: string,
-    @Body() input: ChessMoveInput,
-    @Req() request: AuthenticatedRequest,
-  ) {
-    return this.gamesService.applyMove(id, input, request.user.sub);
   }
 }
