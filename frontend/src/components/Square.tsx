@@ -9,6 +9,9 @@ interface SquareProps {
   onClick: (name: SquareName) => void;
   image?: string;
   orientation: string | null;
+  onDragStart: (name: SquareName) => void;
+  onDrop: (name: SquareName) => void;
+  onDragEnd: () => void;
 }
 
 function Square({
@@ -19,10 +22,15 @@ function Square({
   onClick,
   image,
   orientation,
+  onDragStart,
+  onDrop,
+  onDragEnd
 }: SquareProps) {
   return (
     <ButtonBase
       onClick={() => onClick(name)}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={() => onDrop(name)}
       sx={{
         width: "100%",
         aspectRatio: "1 / 1",
@@ -43,7 +51,12 @@ function Square({
         <img
           src={image}
           alt=""
-          draggable={false}
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.effectAllowed = "move";
+            onDragStart(name);
+          }}
+          onDragEnd={onDragEnd}
           style={{
             width: "80%",
             height: "80%",

@@ -35,6 +35,7 @@ interface BoardProps {
 function Board({ color, position, moves, fen, onMove }: BoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<SquareName | null>(null);
   const [availableSquares, setAvailableSquares] = useState<SquareName[]>([]);
+  const [draggedSquare, setDraggedSquare] = useState<SquareName | null>(null);
 
   function canSelectPiece(piece: FenPiece | undefined): Boolean {
     if (!piece) return false;
@@ -73,6 +74,45 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
     setAvailableSquares([])
   }
 
+  function handleDragStart(name: SquareName) {
+    if (!canSelectPiece(position[name])) {
+      return;
+    }
+
+    setDraggedSquare(name);
+    setSelectedSquare(name)
+
+    const chess = new Chess(fen);
+
+    const moves = chess.moves({
+      square: name,
+      verbose: true,
+    });
+
+    setAvailableSquares(
+      moves.map((move) => move.to as SquareName)
+    );
+  }
+
+  function handleDrop(name: SquareName) {
+    if (!draggedSquare) return;
+
+    if (availableSquares.includes(name)) {
+      onMove(draggedSquare, name);
+    }
+
+    setDraggedSquare(null);
+    setSelectedSquare(null)
+    setAvailableSquares([]);
+  }
+
+  function handleDragEnd() {
+    setDraggedSquare(null);
+    setAvailableSquares([]);
+    setSelectedSquare(null)
+  }
+
+
   function renderBoard() {
     return ranks.map((rank, rowIndex) =>
       files.map((file, columnIndex) => {
@@ -89,6 +129,9 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
             onClick={handleSquareClick}
             image={piece ? pieceImages[piece] : undefined}
             orientation={color}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
           />
         );
       }),
