@@ -98,6 +98,16 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
       const game = await this.gamesService.getGame(payload.gameId);
       await client.join(gameRoom(payload.gameId));
       client.emit("game.state", game);
+
+      const sockets = await this.server.in(gameRoom(payload.gameId)).fetchSockets();
+      const userIds = new Set(sockets.map((socket) => socket.data.user.sub));
+      if (userIds.has(game.whitePlayerUsername) && userIds.has(game.blackPlayerUsername)) {
+        const startedGame = await this.gamesService.startFirstMoveCountdown(game.id);
+        if (startedGame !== null) {
+          this.notifyGameState(game.id, startedGame);
+        }
+      }
+
     } catch (error) {
       if (error instanceof HttpException) {
         client.emit("game.error", {
