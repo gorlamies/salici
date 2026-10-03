@@ -281,7 +281,7 @@ export class GamesService {
     }
   }
 
-  async resign(id: string, resign_username: string): Promise<GameDto> {
+  async resign(id: string, resignUsername: string): Promise<GameDto> {
     const game = await this.prismaService.game.findUnique({
       where: { id },
     });
@@ -292,24 +292,28 @@ export class GamesService {
 
     let newState: GameState;
 
-    if (game.whitePlayerUsername === resign_username) {
+    if (game.whitePlayerUsername === resignUsername) {
       newState = GameState.white_resigned;
-    } else if (game.blackPlayerUsername === resign_username) {
+    } else if (game.blackPlayerUsername === resignUsername) {
       newState = GameState.black_resigned;
     } else {
-      throw new ForbiddenException("User is not a player in this game");
+      throw new ForbiddenException("User is not a player in this game"); // 403
     }
-    return await this.prismaService.game.update({
-      where: { id },
+
+    const result = await this.prismaService.game.updateMany({
+      where: { id, state: { in: [GameState.ready, GameState.running] } },
       data: {
         state: newState,
         finishedAt: new Date(),
         turnStartedAt: null,
       },
-      include: {
-        moves: true,
-      },
     });
+
+    if (result.count === 0)
+      throw new ConflictException("The game is not running."); // 409
+
+    const updatedGame = this.getGame(id);
+    return updatedGame;
 
   }
 
