@@ -82,7 +82,7 @@ export class GamesService {
           : body.playerOneUsername,
         initialTimeMs: initialTimeMs,
         incrementMs: incrementMs,
-        turnStartedAt: initialTimeMs !== null ? new Date() : null,
+        turnStartedAt: null,
         whiteRemainingMs: initialTimeMs === 0 ? incrementMs : initialTimeMs,
         blackRemainingMs: initialTimeMs === 0 ? incrementMs : initialTimeMs,
       },
@@ -178,10 +178,9 @@ export class GamesService {
           game.initialTimeMs !== null &&
           game.incrementMs !== null &&
           game.whiteRemainingMs !== null &&
-          game.blackRemainingMs !== null &&
-          game.turnStartedAt !== null;
+          game.blackRemainingMs !== null;
 
-        if (hasClock) {
+        if (hasClock && game.turnStartedAt !== null) {
           const moverRemainingMs = whiteToMove
             ? game.whiteRemainingMs!
             : game.blackRemainingMs!;
@@ -222,6 +221,9 @@ export class GamesService {
             game.incrementMs!,
             isReadyPhase,
           );
+        } else if (hasClock) {
+          // countdown not started yet, the time of the mover does not change
+          newRemainingMs = whiteToMove ? game.whiteRemainingMs : game.blackRemainingMs;
         }
 
         let applied: AppliedChessMove;
@@ -260,11 +262,11 @@ export class GamesService {
             currentFen: applied.fenAfter,
             state: this.resolveState(applied),
             finishedAt: applied.isGameOver ? now : null,
-            // update the mover time the opponent's turn starts now
+            // update the mover time; the opponent's turn starts now
             ...(hasClock && {
               whiteRemainingMs: whiteToMove ? newRemainingMs : game.whiteRemainingMs,
               blackRemainingMs: whiteToMove ? game.blackRemainingMs : newRemainingMs,
-              turnStartedAt: now,
+              turnStartedAt: this.resolveState(applied) !== GameState.ready || game.turnStartedAt !== null ? now : null, // if the countdown isn't started turnStartedAt does not change
             }),
           },
         });
@@ -311,6 +313,37 @@ export class GamesService {
 
     if (result.count === 0)
       throw new ConflictException("The game is not running."); // 409
+
+    const updatedGame = this.getGame(id);
+    return updatedGame;
+
+  }
+
+  async startFirstMoveCountdown(id: string): Promise<GameDto | null> {
+    const game = await this.prismaService.game.findUnique({
+      where: { id },
+    });
+
+    if (!game) {
+      throw new NotFoundException("Game not found");
+    }
+
+    const result = await this.prismaService.game.updateMany({
+      where: {
+        id,
+        state: GameState.ready,
+        turnStartedAt: null,
+        initialTimeMs: {
+          not: null,
+        },
+      },
+      data: {
+        turnStartedAt: new Date(),
+      },
+    });
+
+    if (result.count === 0)
+      return null;
 
     const updatedGame = this.getGame(id);
     return updatedGame;
