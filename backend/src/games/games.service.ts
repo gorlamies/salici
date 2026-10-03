@@ -281,6 +281,38 @@ export class GamesService {
     }
   }
 
+  async resign(id: string, resign_username: string): Promise<GameDto> {
+    const game = await this.prismaService.game.findUnique({
+      where: { id },
+    });
+
+    if (!game) {
+      throw new NotFoundException("Game not found");
+    }
+
+    let newState: GameState;
+
+    if (game.whitePlayerUsername === resign_username) {
+      newState = GameState.white_resigned;
+    } else if (game.blackPlayerUsername === resign_username) {
+      newState = GameState.black_resigned;
+    } else {
+      throw new ForbiddenException("User is not a player in this game");
+    }
+    return await this.prismaService.game.update({
+      where: { id },
+      data: {
+        state: newState,
+        finishedAt: new Date(),
+        turnStartedAt: null,
+      },
+      include: {
+        moves: true,
+      },
+    });
+
+  }
+
   // state of the game after a move; checkmate > forced draw
   private resolveState(applied: AppliedChessMove): GameState {
     if (applied.isCheckmate) {

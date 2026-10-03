@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Alert, Box, } from "@mui/material";
+import { Alert, Box, Button } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
@@ -186,6 +186,12 @@ function GamePage() {
     });
   }
 
+  function handleResign() {
+    socket.emit("game.resign", {
+      gameId,
+    });
+  }
+
   return (
     <>
       {errorMessage && (
@@ -214,6 +220,7 @@ function GamePage() {
         />
         <Timer time={bottomTime} running={bottomRunning} />
       </Box>
+      <Button variant="contained" onClick={handleResign}> Resign</Button>
       <DialogEndGame open={gameOver} result={result} />
     </>
   );

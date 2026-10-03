@@ -39,7 +39,7 @@ export class GameDto {
   blackRemainingMs!: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
-  firstMoveRemainingMs!: number | null;
+  firstMoveRemainingMs?: number | null;
 
   @ApiProperty({ type: [MoveDto] })
   moves!: MoveDto[];
