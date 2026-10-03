@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import Square from "./Square";
 import MoveHistory from "./MoveHistory";
 import type { SquareName, Position, FenPiece, Color } from "../types/chess";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Chess } from "chess.js";
 import type { Move } from "../api/games";
 
@@ -37,6 +37,29 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
   const [availableSquares, setAvailableSquares] = useState<SquareName[]>([]);
   const [draggedSquare, setDraggedSquare] = useState<SquareName | null>(null);
 
+  const chess = useMemo(() => {
+    if (!fen || fen.trim().split(/\s+/).length !== 6) {
+      return null;
+    }
+
+    return new Chess(fen);
+  }, [fen]);
+
+  const kingCheckSquare = useMemo<SquareName | null>(() => {
+    if (!chess) return null;
+    if (!chess.isCheck()) return null;
+
+    const kingPiece: FenPiece = chess.turn() === "w" ? "K" : "k";
+
+    for (const [square, piece] of Object.entries(position)) {
+      if (piece === kingPiece) {
+        return square as SquareName;
+      }
+    }
+
+    return null;
+  }, [chess, position]);
+
   function canSelectPiece(piece: FenPiece | undefined): Boolean {
     if (!piece) return false;
     if (!color) return false;
@@ -45,6 +68,19 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
     const isPlayerUppercase = color === color.toUpperCase();
 
     return isPieceUppercase === isPlayerUppercase;
+  }
+
+  function showAvailableMoves(name: SquareName) {
+    if (!chess) return [];
+
+    const moves = chess.moves({
+      square: name,
+      verbose: true,
+    });
+
+    setAvailableSquares(
+      moves.map(move => move.to as SquareName)
+    );
   }
 
   function handleSquareClick(name: SquareName) {
@@ -59,11 +95,7 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
     if (selectedSquare == null) {
       if (canSelectPiece(position[name])) {
         setSelectedSquare(name);
-        const chess = new Chess(fen)
-        const moves = (chess.moves({ square: name, verbose: true, }))
-        setAvailableSquares(
-          moves.map(move => move.to as SquareName)
-        );
+        showAvailableMoves(name)
       }
       return;
     }
@@ -80,18 +112,9 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
     }
 
     setDraggedSquare(name);
-    setSelectedSquare(name)
+    setSelectedSquare(name);
+    showAvailableMoves(name)
 
-    const chess = new Chess(fen);
-
-    const moves = chess.moves({
-      square: name,
-      verbose: true,
-    });
-
-    setAvailableSquares(
-      moves.map((move) => move.to as SquareName)
-    );
   }
 
   function handleDrop(name: SquareName) {
@@ -126,6 +149,7 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
             dark={(rowIndex + columnIndex) % 2 === 1}
             selected={selectedSquare === name}
             available={availableSquares.includes(name)}
+            isCheck={kingCheckSquare === name}
             onClick={handleSquareClick}
             image={piece ? pieceImages[piece] : undefined}
             orientation={color}

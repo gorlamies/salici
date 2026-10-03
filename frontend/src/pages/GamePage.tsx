@@ -83,8 +83,19 @@ function GamePage() {
       setFirstMoveMs(game.firstMoveRemainingMs)
       setMoves(game.moves);
 
+      // control the move to arrive
       if (game.currentFen !== game.initialFen && (game.state === "running" || game.state === "ready")) {
-        playSound("move");
+        // if is check, play this sound instead
+        const lastMove = game.moves.at(-1);
+        if (lastMove) {
+          if (lastMove.san.includes("+")) {
+            playSound("check")
+          }
+          else if (lastMove.san.includes("x")) {
+            playSound("capture")
+          }
+          else { playSound("move"); }
+        }
       }
 
 

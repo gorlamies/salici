@@ -5,7 +5,8 @@ interface SquareProps {
   name: SquareName;
   dark: boolean;
   selected: boolean;
-  available: boolean
+  available: boolean;
+  isCheck: boolean;
   onClick: (name: SquareName) => void;
   image?: string;
   orientation: string | null;
@@ -19,6 +20,7 @@ function Square({
   dark,
   selected,
   available,
+  isCheck,
   onClick,
   image,
   orientation,
@@ -34,13 +36,7 @@ function Square({
       sx={{
         width: "100%",
         aspectRatio: "1 / 1",
-        backgroundColor: selected
-          ? dark
-            ? "#dfff77"
-            : "#e3ecae"
-          : dark
-            ? "#73bbfa"
-            : "#cfeaff",
+        backgroundColor: isCheck ? "#e74343" : selected ? dark ? "#dfff77" : "#e3ecae" : dark ? "#73bbfa" : "#cfeaff",
         borderRadius: 0,
         transform: orientation === "b" ? "rotate(180deg)" : "none", // if null acts as white
       }}
