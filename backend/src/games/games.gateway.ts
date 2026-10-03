@@ -156,9 +156,9 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
   }
 
   @SubscribeMessage("game.resign")
-  async handeResign(
+  async handleResign(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: MovePayload,
+    @MessageBody() payload: JoinPayload,
   ) {
     if (!payload?.gameId) {
       client.emit("game.error", {
