@@ -4,7 +4,8 @@ import { Alert, Box, Button } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
 import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
-import { socket } from "../socket";
+import { socket } from "../socket"
+import { playSound } from "../sound";
 
 import Board from "../components/board";
 import DialogEndGame from "../components/DialogEndGame";
@@ -68,6 +69,7 @@ function GamePage() {
     }
 
     function handleState(game: Game) {
+
       setErrorMessage(null);
       setPosition(parseFen(game.currentFen));
       setCurrentfen(game.currentFen)
@@ -75,10 +77,16 @@ function GamePage() {
       if (game.whitePlayerUsername === username) setColor("W");
       else if (game.blackPlayerUsername === username) setColor("b");
       else (setColor("W"))
+
       setBlackTimeMs(game.blackRemainingMs)
       setWhiteTimeMs(game.whiteRemainingMs)
       setFirstMoveMs(game.firstMoveRemainingMs)
       setMoves(game.moves);
+
+      if (game.currentFen !== game.initialFen && (game.state === "running" || game.state === "ready")) {
+        playSound("move");
+      }
+
 
       setActiveColor(game.currentFen.trim().split(/\s+/)[1] as "w" | "b");
       setClocksStarted(game.moves.length >= 2 && game.finishedAt === null);
