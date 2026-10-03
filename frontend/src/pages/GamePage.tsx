@@ -50,6 +50,7 @@ function GamePage() {
   const [firstMoveMs, setFirstMoveMs] = useState<number | null>(null)
   const [activeColor, setActiveColor] = useState<"w" | "b">("w");
   const [clocksStarted, setClocksStarted] = useState(false);
+  const [currentFen, setCurrentfen] = useState<string>("")
 
 
   const bottomColor = color === "b" ? "b" : "w";
@@ -69,6 +70,7 @@ function GamePage() {
     function handleState(game: Game) {
       setErrorMessage(null);
       setPosition(parseFen(game.currentFen));
+      setCurrentfen(game.currentFen)
 
       if (game.whitePlayerUsername === username) setColor("W");
       else if (game.blackPlayerUsername === username) setColor("b");
@@ -216,6 +218,7 @@ function GamePage() {
           color={color}
           position={position}
           moves={moves}
+          fen={currentFen}
           onMove={handleMove}
         />
         <Timer time={bottomTime} running={bottomRunning} />

@@ -3,6 +3,7 @@ import Square from "./Square";
 import MoveHistory from "./MoveHistory";
 import type { SquareName, Position, FenPiece, Color } from "../types/chess";
 import { useState } from "react";
+import { Chess } from "chess.js";
 import type { Move } from "../api/games";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
@@ -27,11 +28,13 @@ interface BoardProps {
   color: Color | null;
   position: Position;
   moves: Move[];
+  fen: string;
   onMove: (from: SquareName, to: SquareName) => void;
 }
 
-function Board({ color, position, moves, onMove }: BoardProps) {
+function Board({ color, position, moves, fen, onMove }: BoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<SquareName | null>(null);
+  const [availableSquares, setAvailableSquares] = useState<SquareName[]>([]);
 
   function canSelectPiece(piece: FenPiece | undefined): Boolean {
     if (!piece) return false;
@@ -47,6 +50,7 @@ function Board({ color, position, moves, onMove }: BoardProps) {
     // deselect on double click on same square
     if (selectedSquare == name) {
       setSelectedSquare(null);
+      setAvailableSquares([])
       return;
     }
 
@@ -54,13 +58,19 @@ function Board({ color, position, moves, onMove }: BoardProps) {
     if (selectedSquare == null) {
       if (canSelectPiece(position[name])) {
         setSelectedSquare(name);
+        const chess = new Chess(fen)
+        const moves = (chess.moves({ square: name, verbose: true, }))
+        setAvailableSquares(
+          moves.map(move => move.to as SquareName)
+        );
       }
       return;
     }
 
-    // second click: ask the parent to apply this move, don't touch the board ourselves
+    // second click: ask the parent to apply this move.
     onMove(selectedSquare, name);
     setSelectedSquare(null);
+    setAvailableSquares([])
   }
 
   function renderBoard() {
@@ -75,6 +85,7 @@ function Board({ color, position, moves, onMove }: BoardProps) {
             name={name}
             dark={(rowIndex + columnIndex) % 2 === 1}
             selected={selectedSquare === name}
+            available={availableSquares.includes(name)}
             onClick={handleSquareClick}
             image={piece ? pieceImages[piece] : undefined}
             orientation={color}
