@@ -1,5 +1,7 @@
 import { Routes, Route, useLocation } from "react-router"
 import { Box, Fade } from "@mui/material"
+import { lightTheme } from "./theme"
+import { ThemeProvider, CssBaseline } from "@mui/material";
 
 import HomePage from "./pages/HomePage"
 import GamePage from "./pages/GamePage"
@@ -12,7 +14,9 @@ function App() {
 
 
   return (
-    <>
+
+    <ThemeProvider theme={lightTheme}>
+      <CssBaseline />
       <Header />
       <Fade key={location.pathname}
         in={true}
@@ -22,11 +26,12 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/game/:gameId" element={<GamePage />} />
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="profile/:UserId" element={<ProfilePage />} />
+            <Route path="/profile/:UserId" element={<ProfilePage />} />
           </Routes>
         </Box>
       </Fade>
-    </>
+    </ThemeProvider>
+
   )
 }
 
