@@ -33,13 +33,13 @@ function Square({
       onClick={() => onClick(name)}
       onDragOver={(event) => event.preventDefault()}
       onDrop={() => onDrop(name)}
-      sx={{
+      sx={(theme) => ({
         width: "100%",
         aspectRatio: "1 / 1",
-        backgroundColor: isCheck ? "#e74343" : selected ? dark ? "#dfff77" : "#e3ecae" : dark ? "#73bbfa" : "#cfeaff",
+        backgroundColor: isCheck ? "#e74343" : selected ? dark ? "#dfff77" : "#e3ecae" : dark ? theme.palette.chess.dark : theme.palette.chess.light,
         borderRadius: 0,
         transform: orientation === "b" ? "rotate(180deg)" : "none", // if null acts as white
-      }}
+      })}
 
     >
 

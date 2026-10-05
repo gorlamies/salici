@@ -10,6 +10,7 @@ import { playSound } from "../sound";
 import Board from "../components/board";
 import DialogEndGame from "../components/DialogEndGame";
 import Timer from "../components/Timer"
+import BoardStage from "../components/BoardStage";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 export function parseFen(fen: string): Position {
@@ -215,34 +216,36 @@ function GamePage() {
 
   return (
     <>
-      {errorMessage && (
-        <Alert severity="error" onClose={() => setErrorMessage(null)}>
-          {errorMessage}
-        </Alert>
-      )}
       <Box
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-          width: "100%",
-          p: 3,
-          boxSizing: "border-box",
+          position: "relative",
+          width: "100vw",
+          height: "100dvh",
+          overflow: "hidden",
         }}
       >
-        {firstMoveMs !== null && <Timer time={firstMoveMs} running />}
-        <Timer time={topTime} running={topRunning} />
-        <Board
-          color={color}
-          position={position}
-          moves={moves}
-          fen={currentFen}
-          onMove={handleMove}
-        />
-        <Timer time={bottomTime} running={bottomRunning} />
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+          }}>
+          {/*firstMoveMs !== null && <Timer time={firstMoveMs} running />*/}
+          {/*<Timer time={topTime} running={topRunning} />*/}
+          <BoardStage>
+            <Board
+              color={color}
+              position={position}
+              moves={moves}
+              fen={currentFen}
+              onMove={handleMove}
+            />
+          </BoardStage>
+          {/*<Timer time={bottomTime} running={bottomRunning} />*/}
+        </Box>
       </Box>
-      <Button variant="contained" onClick={handleResign}> Resign</Button>
+      {/*<Button variant="contained" onClick={handleResign}> Resign</Button>*/}
       <DialogEndGame open={gameOver} result={result} />
     </>
   );

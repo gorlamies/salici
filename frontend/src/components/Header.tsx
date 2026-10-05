@@ -17,9 +17,21 @@ export default function Header() {
 
     return (
         <AppBar
-            position="static"
+            position="fixed"
             color="default"
             elevation={1}
+
+            sx={{
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 1,
+
+                backgroundColor: "rgba(247, 243, 240, 0.25)",
+                backdropFilter: "blur(14px)",
+                WebkitBackdropFilter: "blur(14px)",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+            }}
         >
             <Toolbar sx={{ justifyContent: "space-between", gap: 2 }}>
                 <Box

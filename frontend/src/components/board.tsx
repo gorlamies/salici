@@ -170,13 +170,11 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
             display: "grid",
             gridTemplateColumns: "repeat(8, 1fr)",
             width: "100%",
-            maxWidth: 560,
             transform: color === "b" ? "rotate(180deg)" : "none",
           }}
         >
           {renderBoard()}
         </Box>
-        <MoveHistory moves={moves} />
       </Box>
     </Box>
   );
