@@ -6,8 +6,8 @@ import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
 import { socket } from "../socket"
 import { playSound } from "../sound";
+import { useBoardTransition } from "../context/BoardTransitionContext";
 
-import Board from "../components/board";
 import DialogEndGame from "../components/DialogEndGame";
 import Timer from "../components/Timer"
 import BoardStage from "../components/BoardStage";
@@ -37,16 +37,24 @@ export function parseFen(fen: string): Position {
 
 function GamePage() {
 
+  const {
+    setMode,
+    setColor,
+    color,
+    setPosition,
+    setFen,
+    setOnMove,
+    setTransitioning,
+  } = useBoardTransition();
+
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { accessToken, username, refresh } = useAuth();
   const refreshAttempted = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [position, setPosition] = useState<Position>({});
   const [moves, setMoves] = useState<Move[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  const [color, setColor] = useState<Color | null>(null);
   const [blackTimeMs, setBlackTimeMs] = useState<number | null>(null)
   const [whiteTimeMs, setWhiteTimeMs] = useState<number | null>(null)
   const [firstMoveMs, setFirstMoveMs] = useState<number | null>(null)
@@ -64,6 +72,10 @@ function GamePage() {
   const topRunning = clocksStarted && activeColor !== bottomColor;
 
   useEffect(() => {
+
+    setMode("game");
+    setTransitioning(false);
+
     function handleConnect() {
       refreshAttempted.current = false;
       socket.emit("game.join", { gameId });
@@ -224,29 +236,25 @@ function GamePage() {
           overflow: "hidden",
         }}
       >
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-          }}>
-          {/*firstMoveMs !== null && <Timer time={firstMoveMs} running />*/}
-          {/*<Timer time={topTime} running={topRunning} />*/}
-          <BoardStage>
-            <Board
-              color={color}
-              position={position}
-              moves={moves}
-              fen={currentFen}
-              onMove={handleMove}
-            />
-          </BoardStage>
-          {/*<Timer time={bottomTime} running={bottomRunning} />*/}
-        </Box>
+        {/* Game-page-only UI goes here */}
+
+        {/*
+      <Timer time={topTime} running={topRunning} />
+      <Timer time={bottomTime} running={bottomRunning} />
+
+      <Button
+        variant="contained"
+        onClick={handleResign}
+      >
+        Resign
+      </Button>
+      */}
       </Box>
-      {/*<Button variant="contained" onClick={handleResign}> Resign</Button>*/}
-      <DialogEndGame open={gameOver} result={result} />
+
+      <DialogEndGame
+        open={gameOver}
+        result={result}
+      />
     </>
   );
 }

@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { socket } from "../socket";
 import GameNotifications from "../components/GameNotifications";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { useBoardTransition } from "../context/BoardTransitionContext";
 import HomeBackground from "../components/HomeBackground";
 import BoardStage from "../components/BoardStage";
 
@@ -33,19 +34,19 @@ function HomePage() {
   const [time, setTime] = useState<string>("");
   const [gameMinutesMs, setGameMinutesMs] = useState<number | null>(null);
   const [gameIncrementMs, setGameIncrementMs] = useState<number | null>(null);
-  const [startingGame, setStartingGame] = useState(false);
-  const [pendingGameId, setPendingGameId] = useState<string | null>(null);
+
 
   const { accessToken, username, refresh } = useAuth();
   const navigate = useNavigate();
   const authFetch = useAuthenticatedFetch();
   const refreshAttempted = useRef(false);
+  const { setMode, setTransitioning, transitioning } = useBoardTransition();
 
 
   async function handleNewGameCreation() {
     try {
 
-      if (startingGame) { return }
+      if (transitioning) { return }
       const gameId = await createGame(
         {
           playerOneUsername: username!,
@@ -55,10 +56,7 @@ function HomePage() {
         },
         authFetch
       );
-
-      setPendingGameId(gameId);
-      setStartingGame(true);
-
+      setTransitioning(true);
       window.setTimeout(() => {
         navigate(`/game/${gameId}`);
       }, TRANSITION_MS);
@@ -69,6 +67,9 @@ function HomePage() {
   }
 
   useEffect(() => {
+    setMode("home");
+    setTransitioning(false);
+
     async function handleConnect() {
       try {
         setOpenGames(await getOpenGames(authFetch));
@@ -127,7 +128,7 @@ function HomePage() {
       socket.off("game.created", handleGameCreated);
       socket.disconnect();
     };
-  }, [accessToken, navigate, refresh]);
+  }, [accessToken, navigate, refresh, setMode, setTransitioning]);
 
 
   return (
@@ -137,11 +138,8 @@ function HomePage() {
         width: "100vw",
         height: "100dvh",
         overflow: "hidden",
-
       }}
     >
-
-
       {/* LEFT MENU */}
       <Box
         sx={{
@@ -151,21 +149,28 @@ function HomePage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          opacity: startingGame ? 0 : 1,
-          transform: startingGame ? "translateX(-80px)" : "translateX(0)",
+
+          opacity: transitioning ? 0 : 1,
+
+          transform: transitioning
+            ? "translateX(-80px)"
+            : "translateX(0)",
+
           transition: `
-            opacity ${TRANSITION_MS * 0.55}ms ease,
-            transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)
-          `,
-          pointerEvents: startingGame ? "none" : "auto",
+          opacity ${TRANSITION_MS * 0.55}ms ease,
+          transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)
+        `,
+
+          pointerEvents: transitioning
+            ? "none"
+            : "auto",
         }}
       >
-
         {/* MAIN MENU */}
         <Fade
           in={
             menuState === "main" &&
-            !startingGame
+            !transitioning
           }
           timeout={500}
         >
@@ -200,7 +205,7 @@ function HomePage() {
         <Fade
           in={
             menuState === "createGame" &&
-            !startingGame
+            !transitioning
           }
           timeout={500}
         >
@@ -214,9 +219,7 @@ function HomePage() {
             <TextField
               value={opponent}
               onChange={(event) =>
-                setOpponent(
-                  event.target.value
-                )
+                setOpponent(event.target.value)
               }
               label="Opponent"
             />
@@ -224,10 +227,7 @@ function HomePage() {
             <ToggleButtonGroup
               value={time}
               exclusive
-              onChange={(
-                _,
-                value: string | null
-              ) => {
+              onChange={(_, value: string | null) => {
                 setTime(value ?? "");
 
                 if (value === null) {
@@ -264,12 +264,9 @@ function HomePage() {
                 "& .MuiToggleButtonGroup-grouped":
                 {
                   margin: 0,
-                  border:
-                    "1px solid",
-                  borderColor:
-                    "divider",
-                  borderRadius:
-                    "4px",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "4px",
                 },
               }}
             >
@@ -294,9 +291,7 @@ function HomePage() {
             </ToggleButtonGroup>
 
             <MenuButton
-              onClick={
-                handleNewGameCreation
-              }
+              onClick={handleNewGameCreation}
               variant="contained"
             >
               Create Game
@@ -313,29 +308,7 @@ function HomePage() {
           </Stack>
         </Fade>
       </Box>
-
-
-      {/* RIGHT SIDE */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: "50%",
-          left: startingGame ? "50%" : "70%",
-          transform: "translate(-50%, -50%)",
-
-          transition: `
-      left 700ms cubic-bezier(0.22, 1, 0.36, 1)
-    `,
-        }}
-
-      >
-        <BoardStage>
-          <HomeBackground />
-        </BoardStage>
-      </Box>
     </Box>
-
-
   );
 }
 export default HomePage

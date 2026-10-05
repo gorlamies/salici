@@ -27,12 +27,11 @@ const pieceImages: Record<FenPiece, string> = {
 interface BoardProps {
   color: Color | null;
   position: Position;
-  moves: Move[];
   fen: string;
   onMove: (from: SquareName, to: SquareName) => void;
 }
 
-function Board({ color, position, moves, fen, onMove }: BoardProps) {
+function Board({ color, position, fen, onMove }: BoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<SquareName | null>(null);
   const [availableSquares, setAvailableSquares] = useState<SquareName[]>([]);
   const [draggedSquare, setDraggedSquare] = useState<SquareName | null>(null);
