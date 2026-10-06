@@ -8,7 +8,6 @@ type Props = {
     transitioning?: boolean;
     color?: any;
     position?: any;
-    moves?: any[];
     fen?: string;
     onMove?: any;
 };

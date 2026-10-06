@@ -132,14 +132,7 @@ function HomePage() {
 
 
   return (
-    <Box
-      sx={{
-        position: "relative",
-        width: "100vw",
-        height: "100dvh",
-        overflow: "hidden",
-      }}
-    >
+    <>
       {/* LEFT MENU */}
       <Box
         sx={{
@@ -149,6 +142,7 @@ function HomePage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+
 
           opacity: transitioning ? 0 : 1,
 
@@ -308,7 +302,8 @@ function HomePage() {
           </Stack>
         </Fade>
       </Box>
-    </Box>
+    </>
+
   );
 }
 export default HomePage

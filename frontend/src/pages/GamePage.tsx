@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Alert, Box, Button } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
@@ -11,6 +11,11 @@ import { useBoardTransition } from "../context/BoardTransitionContext";
 import DialogEndGame from "../components/DialogEndGame";
 import Timer from "../components/Timer"
 import BoardStage from "../components/BoardStage";
+
+import {
+  BOARD_SIZE,
+  BOARD_HALF,
+} from "../components/BoardStage";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 export function parseFen(fen: string): Position {
@@ -72,9 +77,6 @@ function GamePage() {
   const topRunning = clocksStarted && activeColor !== bottomColor;
 
   useEffect(() => {
-
-    setMode("game");
-    setTransitioning(false);
 
     function handleConnect() {
       refreshAttempted.current = false;
@@ -195,6 +197,10 @@ function GamePage() {
       setErrorMessage(error.message);
     }
 
+    setMode("game");
+    setTransitioning(false);
+    setOnMove(handleMove);
+
     socket.auth = { token: accessToken };
 
     socket.on("connect", handleConnect);
@@ -205,6 +211,7 @@ function GamePage() {
     socket.connect();
 
     return () => {
+      setOnMove(null);
       socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
@@ -213,12 +220,14 @@ function GamePage() {
     };
   }, [gameId, accessToken, username, navigate, refresh]);
 
-  function handleMove(from: SquareName, to: SquareName) {
+  const handleMove = useCallback((from: SquareName, to: SquareName) => {
     socket.emit("game.move", {
       gameId,
       move: { from, to },
     });
-  }
+  },
+    [gameId]
+  )
 
   function handleResign() {
     socket.emit("game.resign", {
@@ -228,29 +237,56 @@ function GamePage() {
 
   return (
     <>
+      {/* TOP TIMER */}
       <Box
         sx={{
-          position: "relative",
-          width: "100vw",
-          height: "100dvh",
-          overflow: "hidden",
+          position: "absolute",
+          left: "50%",
+          top: `calc(45% - ${BOARD_HALF})`,
+          transform: "translateX(-50%)",
+          pointerEvents: "auto",
+
         }}
       >
-        {/* Game-page-only UI goes here */}
-
-        {/*
-      <Timer time={topTime} running={topRunning} />
-      <Timer time={bottomTime} running={bottomRunning} />
-
-      <Button
-        variant="contained"
-        onClick={handleResign}
-      >
-        Resign
-      </Button>
-      */}
+        <Timer
+          time={topTime}
+          running={topRunning}
+        />
       </Box>
 
+      {/* BOTTOM TIMER */}
+      <Box
+        sx={{
+          position: "absolute",
+          left: "50%",
+          top: `calc(52% + ${BOARD_HALF} )`,
+          transform: "translateX(-50%)",
+          pointerEvents: "auto",
+
+        }}
+      >
+        <Timer
+          time={bottomTime}
+          running={bottomRunning}
+        />
+      </Box>
+
+      {/* RESIGN BUTTON */}
+      <Box
+        sx={{
+          position: "absolute",
+          left: `calc(50% + ${BOARD_HALF} )`,
+          bottom: 32,
+          pointerEvents: "auto",
+        }}
+      >
+        <Button
+          variant="contained"
+          onClick={handleResign}
+        >
+          Resign
+        </Button>
+      </Box>
       <DialogEndGame
         open={gameOver}
         result={result}

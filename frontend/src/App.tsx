@@ -32,26 +32,45 @@ function App() {
       <CssBaseline />
       <Header />
 
-      <PersistentBoardLayer
-        mode={mode}
-        transitioning={transitioning}
-        color={color}
-        position={position}
-        fen={fen}
-        onMove={onMove ?? undefined} />
-      <Fade key={location.pathname}
-        in={true}
-        timeout={500}>
-        <Box>
+      {/*CONTENT AREA*/}
+      <Box
+        sx={{
+          position: "fixed",
+          top: "64px",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflow: "hidden",
+        }}
+      >
+        <PersistentBoardLayer
+          mode={mode}
+          transitioning={transitioning}
+          color={color}
+          position={position}
+          fen={fen}
+          onMove={onMove} />
 
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/game/:gameId" element={<GamePage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/profile/:UserId" element={<ProfilePage />} />
-          </Routes>
-        </Box>
-      </Fade>
+        <Fade key={location.pathname}
+          in={true}
+          timeout={500}>
+
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+            }}
+          >
+
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/game/:gameId" element={<GamePage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/profile/:UserId" element={<ProfilePage />} />
+            </Routes>
+          </Box>
+        </Fade>
+      </Box>
     </ThemeProvider >
 
   )
