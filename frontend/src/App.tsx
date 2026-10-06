@@ -9,20 +9,11 @@ import AuthPage from "./pages/AuthPage"
 import ProfilePage from "./pages/ProfilePage"
 import Header from "./components/Header"
 import PersistentBoardLayer from "./components/PersistenBoardLayer";
-import { useBoardTransition }
-  from "./context/BoardTransitionContext";
+
 
 function App() {
   const location = useLocation();
 
-  const {
-    mode,
-    transitioning,
-    color,
-    position,
-    fen,
-    onMove,
-  } = useBoardTransition();
 
 
   return (
@@ -43,13 +34,7 @@ function App() {
           overflow: "hidden",
         }}
       >
-        <PersistentBoardLayer
-          mode={mode}
-          transitioning={transitioning}
-          color={color}
-          position={position}
-          fen={fen}
-          onMove={onMove} />
+        <PersistentBoardLayer />
 
         <Fade key={location.pathname}
           in={true}

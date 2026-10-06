@@ -28,7 +28,7 @@ interface BoardProps {
   color: Color | null;
   position: Position;
   fen: string;
-  onMove: (from: SquareName, to: SquareName) => void;
+  onMove?: (from: SquareName, to: SquareName) => void;
 }
 
 function Board({ color, position, fen, onMove }: BoardProps) {
@@ -100,7 +100,7 @@ function Board({ color, position, fen, onMove }: BoardProps) {
     }
 
     // second click: ask the parent to apply this move.
-    onMove(selectedSquare, name);
+    onMove?.(selectedSquare, name);
     setSelectedSquare(null);
     setAvailableSquares([])
   }
@@ -120,7 +120,7 @@ function Board({ color, position, fen, onMove }: BoardProps) {
     if (!draggedSquare) return;
 
     if (availableSquares.includes(name)) {
-      onMove(draggedSquare, name);
+      onMove?.(draggedSquare, name);
     }
 
     setDraggedSquare(null);

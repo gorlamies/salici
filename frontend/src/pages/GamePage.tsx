@@ -9,13 +9,7 @@ import { playSound } from "../sound";
 import { useBoardTransition } from "../context/BoardTransitionContext";
 
 import DialogEndGame from "../components/DialogEndGame";
-import Timer from "../components/Timer"
-import BoardStage from "../components/BoardStage";
 
-import {
-  BOARD_SIZE,
-  BOARD_HALF,
-} from "../components/BoardStage";
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 export function parseFen(fen: string): Position {
@@ -50,6 +44,12 @@ function GamePage() {
     setFen,
     setOnMove,
     setTransitioning,
+
+    setTopTime,
+    setBottomTime,
+    setTopRunning,
+    setBottomRunning,
+    setOnResign,
   } = useBoardTransition();
 
   const navigate = useNavigate();
@@ -198,8 +198,14 @@ function GamePage() {
     }
 
     setMode("game");
+    setTopTime(topTime);
+    setBottomTime(bottomTime);
+    setTopRunning(topRunning);
+    setBottomRunning(bottomRunning);
+
     setTransitioning(false);
     setOnMove(handleMove);
+    setOnResign(() => handleResign)
 
     socket.auth = { token: accessToken };
 
@@ -212,13 +218,14 @@ function GamePage() {
 
     return () => {
       setOnMove(null);
+      setOnResign(null);
       socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
       socket.off("game.error", handleError);
       socket.disconnect();
     };
-  }, [gameId, accessToken, username, navigate, refresh]);
+  }, [gameId, accessToken, username, navigate, refresh, topTime, bottomTime, topRunning, bottomRunning,]);
 
   const handleMove = useCallback((from: SquareName, to: SquareName) => {
     socket.emit("game.move", {
@@ -229,64 +236,14 @@ function GamePage() {
     [gameId]
   )
 
-  function handleResign() {
+  const handleResign = useCallback(() => {
     socket.emit("game.resign", {
       gameId,
     });
-  }
+  }, [])
 
   return (
     <>
-      {/* TOP TIMER */}
-      <Box
-        sx={{
-          position: "absolute",
-          left: "50%",
-          top: `calc(45% - ${BOARD_HALF})`,
-          transform: "translateX(-50%)",
-          pointerEvents: "auto",
-
-        }}
-      >
-        <Timer
-          time={topTime}
-          running={topRunning}
-        />
-      </Box>
-
-      {/* BOTTOM TIMER */}
-      <Box
-        sx={{
-          position: "absolute",
-          left: "50%",
-          top: `calc(52% + ${BOARD_HALF} )`,
-          transform: "translateX(-50%)",
-          pointerEvents: "auto",
-
-        }}
-      >
-        <Timer
-          time={bottomTime}
-          running={bottomRunning}
-        />
-      </Box>
-
-      {/* RESIGN BUTTON */}
-      <Box
-        sx={{
-          position: "absolute",
-          left: `calc(50% + ${BOARD_HALF} )`,
-          bottom: 32,
-          pointerEvents: "auto",
-        }}
-      >
-        <Button
-          variant="contained"
-          onClick={handleResign}
-        >
-          Resign
-        </Button>
-      </Box>
       <DialogEndGame
         open={gameOver}
         result={result}

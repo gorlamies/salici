@@ -1,16 +1,5 @@
-// context/BoardTransitionContext.tsx
-
-import {
-    createContext,
-    useContext,
-    useState,
-} from "react";
-
-import type {
-    Color,
-    Position,
-    SquareName,
-} from "../types/chess";
+import { createContext, useContext, useState } from "react";
+import type { Color, Position, SquareName, } from "../types/chess";
 
 
 type BoardMode = "home" | "game" | "hidden";
@@ -35,6 +24,21 @@ type BoardTransitionContextType = {
     setOnMove: (
         fn: ((from: SquareName, to: SquareName) => void) | null
     ) => void;
+
+    topTime: number | null;
+    setTopTime: (value: number | null) => void;
+
+    bottomTime: number | null;
+    setBottomTime: (value: number | null) => void;
+
+    topRunning: boolean;
+    setTopRunning: (value: boolean) => void;
+
+    bottomRunning: boolean;
+    setBottomRunning: (value: boolean) => void;
+
+    onResign: (() => void) | null;
+    setOnResign: (handler: (() => void) | null) => void;
 };
 
 const BoardTransitionContext =
@@ -45,31 +49,29 @@ export function BoardTransitionProvider({
 }: {
     children: React.ReactNode;
 }) {
-    const [mode, setMode] =
-        useState<BoardMode>("home");
+    const [mode, setMode] = useState<BoardMode>("home");
 
-    const [transitioning, setTransitioning] =
-        useState(false);
+    const [transitioning, setTransitioning] = useState(false);
 
-    const [color, setColor] =
-        useState<Color | null>(null);
+    const [color, setColor] = useState<Color | null>(null);
 
-    const [position, setPosition] =
-        useState<Position>({});
+    const [position, setPosition] = useState<Position>({});
 
-    const [fen, setFen] =
-        useState("");
+    const [fen, setFen] = useState("");
 
-    const [onMove, setOnMoveState] =
-        useState<
-            ((from: SquareName, to: SquareName) => void) | null
-        >(null);
+    const [onMove, setOnMoveState] = useState<((from: SquareName, to: SquareName) => void) | null>(null);
 
-    function setOnMove(
-        fn: ((from: SquareName, to: SquareName) => void) | null
-    ) {
-        setOnMoveState(() => fn);
-    }
+    function setOnMove(fn: ((from: SquareName, to: SquareName) => void) | null) { setOnMoveState(() => fn); }
+
+    const [topTime, setTopTime] = useState<number | null>(null);
+
+    const [bottomTime, setBottomTime] = useState<number | null>(null);
+
+    const [topRunning, setTopRunning] = useState(false);
+
+    const [bottomRunning, setBottomRunning] = useState(false);
+
+    const [onResign, setOnResign] = useState<(() => void) | null>(null);
 
     return (
         <BoardTransitionContext.Provider
@@ -91,6 +93,21 @@ export function BoardTransitionProvider({
 
                 onMove,
                 setOnMove,
+
+                topTime,
+                setTopTime,
+
+                bottomTime,
+                setBottomTime,
+
+                topRunning,
+                setTopRunning,
+
+                bottomRunning,
+                setBottomRunning,
+
+                onResign,
+                setOnResign,
             }}
         >
             {children}

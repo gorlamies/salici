@@ -12,9 +12,14 @@ export default function BoardStage({ children }: BoardStageProps) {
     return (
         <Box
             sx={{
+                position: "relative",
+
                 width: BOARD_SIZE,
-                aspectRatio: "1 / 1",
+                height: BOARD_SIZE,
+
                 flexShrink: 0,
+
+                overflow: "visible",
             }}
         >
             {children}
