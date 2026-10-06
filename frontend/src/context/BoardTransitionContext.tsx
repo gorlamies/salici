@@ -13,7 +13,7 @@ import type {
 } from "../types/chess";
 
 
-type BoardMode = "home" | "game";
+type BoardMode = "home" | "game" | "hidden";
 
 type BoardTransitionContextType = {
     mode: BoardMode;

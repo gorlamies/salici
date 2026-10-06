@@ -138,7 +138,7 @@ function HomePage() {
         sx={{
           position: "absolute",
           inset: 0,
-          width: "40%",
+          width: "50%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -184,6 +184,15 @@ function HomePage() {
               New Game
             </MenuButton>
 
+            {username && accessToken && (
+              <MenuButton
+                onClick={() => navigate(`/profile/${username}`)}
+                variant="contained"
+              >
+                My Profile
+              </MenuButton>
+            )}
+
             <MenuButton
               onClick={() =>
                 navigate("/auth")
@@ -192,6 +201,7 @@ function HomePage() {
             >
               Login
             </MenuButton>
+
           </Stack>
         </Fade>
 

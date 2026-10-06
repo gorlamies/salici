@@ -5,6 +5,7 @@ import { signup, login } from "../api/auth";
 import type { LoginDto, SignupDto } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 
+
 type AuthMode = "login" | "signup";
 
 function AuthPage() {
@@ -55,67 +56,74 @@ function AuthPage() {
       component="form"
       onSubmit={handleFormSubmit}
       sx={{
-        width: "100%",
-        height: "100%",
-        maxWidth: 400,
-        mx: "auto",
+        position: "absolute",
+        inset: 0,
+        width: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
+      <Box sx={{
+        minWidth: 400,
+        maxWidth: 400,
+      }}>
 
-      <Fade key={mode} in timeout={500}>
-        <Stack spacing={2}>
-          <Typography variant="h5">
-            {mode === "login" ? "Login" : "Sign up"}
-          </Typography>
+        <Fade key={mode} in timeout={500}>
+          <Stack spacing={2}>
+            <Typography variant="h5">
+              {mode === "login" ? "Login" : "Sign up"}
+            </Typography>
 
-          <TextField
-            label="Username"
-            value={username}
-            onChange={(event) => setUser(event.target.value)}
-            required
-            fullWidth
-          />
-
-          {mode === "signup" && (
             <TextField
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              label="Username"
+              value={username}
+              onChange={(event) => setUser(event.target.value)}
               required
               fullWidth
             />
-          )}
 
-          <TextField
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            fullWidth
-          />
+            {mode === "signup" && (
+              <TextField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                fullWidth
+              />
+            )}
 
-          {error && <Typography color="error">{error}</Typography>}
+            <TextField
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              fullWidth
+            />
 
-          <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? "Loading..." : mode === "login" ? "Login" : "Sign up"}
-          </Button>
+            {error && <Typography color="error">{error}</Typography>}
 
-          <Button
-            type="button"
-            variant="contained"
-            onClick={() =>
-              setMode((current) => (current === "login" ? "signup" : "login"))
-            }
-          >
-            {mode === "login"
-              ? "Create an account"
-              : "Already have an account? Login"}
-          </Button>
-          <Button variant="contained" onClick={() => navigate("/")}> Back To Menu</Button>
-        </Stack>
-      </Fade>
+            <Button type="submit" variant="contained" disabled={loading}>
+              {loading ? "Loading..." : mode === "login" ? "Login" : "Sign up"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="contained"
+              onClick={() =>
+                setMode((current) => (current === "login" ? "signup" : "login"))
+              }
+            >
+              {mode === "login"
+                ? "Create an account"
+                : "Already have an account? Login"}
+            </Button>
+            <Button variant="contained" onClick={() => navigate("/")}> Back To Menu</Button>
+          </Stack>
+        </Fade>
+      </Box>
     </Box>
   );
 }

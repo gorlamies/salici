@@ -4,7 +4,7 @@ import HomeBackground from "./HomeBackground";
 import Board from "./board";
 
 type Props = {
-    mode: "home" | "game";
+    mode: "home" | "game" | "hidden";
     transitioning?: boolean;
     color?: any;
     position?: any;
@@ -24,7 +24,7 @@ export default function PersistentBoardLayer({
         <Box
             sx={{
                 position: "fixed",
-                top: "50%",
+                top: "55%",
                 left:
                     mode === "home" && !transitioning
                         ? "70%"
@@ -32,10 +32,12 @@ export default function PersistentBoardLayer({
 
                 transform: "translate(-50%, -50%)",
 
+                opacity: mode === "hidden" ? 0 : 1,
                 transition:
                     "left 700ms cubic-bezier(0.22, 1, 0.36, 1)",
 
                 zIndex: 1,
+
             }}
         >
             <BoardStage>
