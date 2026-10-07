@@ -8,29 +8,55 @@ import GamePage from "./pages/GamePage"
 import AuthPage from "./pages/AuthPage"
 import ProfilePage from "./pages/ProfilePage"
 import Header from "./components/Header"
+import PersistentBoardLayer from "./components/PersistenBoardLayer";
+
 
 function App() {
   const location = useLocation();
 
 
+
   return (
 
     <ThemeProvider theme={lightTheme}>
+
       <CssBaseline />
       <Header />
-      <Fade key={location.pathname}
-        in={true}
-        timeout={500}>
-        <Box>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/game/:gameId" element={<GamePage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/profile/:UserId" element={<ProfilePage />} />
-          </Routes>
-        </Box>
-      </Fade>
-    </ThemeProvider>
+
+      {/*CONTENT AREA*/}
+      <Box
+        sx={{
+          position: "fixed",
+          top: "64px",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflow: "hidden",
+        }}
+      >
+        <PersistentBoardLayer />
+
+        <Fade key={location.pathname}
+          in={true}
+          timeout={500}>
+
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+            }}
+          >
+
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/game/:gameId" element={<GamePage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/profile/:UserId" element={<ProfilePage />} />
+            </Routes>
+          </Box>
+        </Fade>
+      </Box>
+    </ThemeProvider >
 
   )
 }

@@ -5,6 +5,7 @@ import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { getProfileInfo } from "../api/profile"
 import { useAuth } from "../context/AuthContext";
 import { logout } from "../api/auth"
+import { useBoardTransition } from "../context/BoardTransitionContext";
 
 
 export default function ProfilePage() {
@@ -13,6 +14,7 @@ export default function ProfilePage() {
     const { UserId } = useParams();
     const { username, setAccessToken } = useAuth();
     const authFetch = useAuthenticatedFetch();
+    const { setMode } = useBoardTransition();
 
     const [data, setData] = useState<{
         username: string;
@@ -45,6 +47,7 @@ export default function ProfilePage() {
             }
 
         }
+        setMode("hidden")
         loadProfile();
     }, [UserId, authFetch, navigate])
 

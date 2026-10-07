@@ -27,12 +27,11 @@ const pieceImages: Record<FenPiece, string> = {
 interface BoardProps {
   color: Color | null;
   position: Position;
-  moves: Move[];
   fen: string;
-  onMove: (from: SquareName, to: SquareName) => void;
+  onMove?: (from: SquareName, to: SquareName) => void;
 }
 
-function Board({ color, position, moves, fen, onMove }: BoardProps) {
+function Board({ color, position, fen, onMove }: BoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<SquareName | null>(null);
   const [availableSquares, setAvailableSquares] = useState<SquareName[]>([]);
   const [draggedSquare, setDraggedSquare] = useState<SquareName | null>(null);
@@ -101,7 +100,7 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
     }
 
     // second click: ask the parent to apply this move.
-    onMove(selectedSquare, name);
+    onMove?.(selectedSquare, name);
     setSelectedSquare(null);
     setAvailableSquares([])
   }
@@ -121,7 +120,7 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
     if (!draggedSquare) return;
 
     if (availableSquares.includes(name)) {
-      onMove(draggedSquare, name);
+      onMove?.(draggedSquare, name);
     }
 
     setDraggedSquare(null);
@@ -170,13 +169,11 @@ function Board({ color, position, moves, fen, onMove }: BoardProps) {
             display: "grid",
             gridTemplateColumns: "repeat(8, 1fr)",
             width: "100%",
-            maxWidth: 560,
             transform: color === "b" ? "rotate(180deg)" : "none",
           }}
         >
           {renderBoard()}
         </Box>
-        <MoveHistory moves={moves} />
       </Box>
     </Box>
   );

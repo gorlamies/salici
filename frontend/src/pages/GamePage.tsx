@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Alert, Box, Button } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
@@ -6,10 +6,10 @@ import type { Color, Position, SquareName, FenPiece } from "../types/chess";
 import type { Game, Move } from "../api/games";
 import { socket } from "../socket"
 import { playSound } from "../sound";
+import { useBoardTransition } from "../context/BoardTransitionContext";
 
-import Board from "../components/board";
 import DialogEndGame from "../components/DialogEndGame";
-import Timer from "../components/Timer"
+
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 export function parseFen(fen: string): Position {
@@ -36,16 +36,30 @@ export function parseFen(fen: string): Position {
 
 function GamePage() {
 
+  const {
+    setMode,
+    setColor,
+    color,
+    setPosition,
+    setFen,
+    setOnMove,
+    setTransitioning,
+
+    setTopTime,
+    setBottomTime,
+    setTopRunning,
+    setBottomRunning,
+    setOnResign,
+  } = useBoardTransition();
+
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { accessToken, username, refresh } = useAuth();
   const refreshAttempted = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [position, setPosition] = useState<Position>({});
   const [moves, setMoves] = useState<Move[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  const [color, setColor] = useState<Color | null>(null);
   const [blackTimeMs, setBlackTimeMs] = useState<number | null>(null)
   const [whiteTimeMs, setWhiteTimeMs] = useState<number | null>(null)
   const [firstMoveMs, setFirstMoveMs] = useState<number | null>(null)
@@ -63,6 +77,7 @@ function GamePage() {
   const topRunning = clocksStarted && activeColor !== bottomColor;
 
   useEffect(() => {
+
     function handleConnect() {
       refreshAttempted.current = false;
       socket.emit("game.join", { gameId });
@@ -182,6 +197,16 @@ function GamePage() {
       setErrorMessage(error.message);
     }
 
+    setMode("game");
+    setTopTime(topTime);
+    setBottomTime(bottomTime);
+    setTopRunning(topRunning);
+    setBottomRunning(bottomRunning);
+
+    setTransitioning(false);
+    setOnMove(handleMove);
+    setOnResign(() => handleResign)
+
     socket.auth = { token: accessToken };
 
     socket.on("connect", handleConnect);
@@ -192,58 +217,37 @@ function GamePage() {
     socket.connect();
 
     return () => {
+      setOnMove(null);
+      setOnResign(null);
       socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
       socket.off("game.error", handleError);
       socket.disconnect();
     };
-  }, [gameId, accessToken, username, navigate, refresh]);
+  }, [gameId, accessToken, username, navigate, refresh, topTime, bottomTime, topRunning, bottomRunning,]);
 
-  function handleMove(from: SquareName, to: SquareName) {
+  const handleMove = useCallback((from: SquareName, to: SquareName) => {
     socket.emit("game.move", {
       gameId,
       move: { from, to },
     });
-  }
+  },
+    [gameId]
+  )
 
-  function handleResign() {
+  const handleResign = useCallback(() => {
     socket.emit("game.resign", {
       gameId,
     });
-  }
+  }, [])
 
   return (
     <>
-      {errorMessage && (
-        <Alert severity="error" onClose={() => setErrorMessage(null)}>
-          {errorMessage}
-        </Alert>
-      )}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-          width: "100%",
-          p: 3,
-          boxSizing: "border-box",
-        }}
-      >
-        {firstMoveMs !== null && <Timer time={firstMoveMs} running />}
-        <Timer time={topTime} running={topRunning} />
-        <Board
-          color={color}
-          position={position}
-          moves={moves}
-          fen={currentFen}
-          onMove={handleMove}
-        />
-        <Timer time={bottomTime} running={bottomRunning} />
-      </Box>
-      <Button variant="contained" onClick={handleResign}> Resign</Button>
-      <DialogEndGame open={gameOver} result={result} />
+      <DialogEndGame
+        open={gameOver}
+        result={result}
+      />
     </>
   );
 }

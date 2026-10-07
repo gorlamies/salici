@@ -1,85 +1,87 @@
-// theme.ts
-
 import { createTheme } from "@mui/material/styles";
+
+declare module "@mui/material/styles" {
+    interface Palette {
+        chess: {
+            light: string;
+            dark: string;
+            lightHover: string;
+            darkHover: string;
+            selected: string;
+            possibleMove: string;
+            background: string;
+            surface: string;
+            accent: string;
+        };
+    }
+
+    interface PaletteOptions {
+        chess?: {
+            light: string;
+            dark: string;
+            lightHover: string;
+            darkHover: string;
+            selected: string;
+            possibleMove: string;
+            background: string;
+            surface: string;
+            accent: string;
+        };
+    }
+}
 
 export const lightTheme = createTheme({
     palette: {
         mode: "light",
 
         primary: {
-            light: "#A98274",
-            main: "#795548",
-            dark: "#5D4037",
-            contrastText: "#FFFFFF",
+            main: "#5C4033",
+            light: "#7A5A49",
+            dark: "#3B2922",
+            contrastText: "#FFF9F2",
         },
 
         secondary: {
-            light: "#D7CCC8",
-            main: "#A1887F",
-            dark: "#6D4C41",
-            contrastText: "#FFFFFF",
+            main: "#A67C52",
+            light: "#C29A72",
+            dark: "#7C5B3C",
+            contrastText: "#1F1713",
         },
 
         background: {
-            default: "#F7F3F0",
-            paper: "#FFFFFF",
+            default: "#F3ECE3",
+            paper: "#FFF9F2",
         },
 
         text: {
-            primary: "#2F2521",
-            secondary: "#6F625C",
+            primary: "#241A16",
+            secondary: "#6E5A50",
         },
 
-        divider: "#D8CCC6",
-
-        action: {
-            hover: "rgba(121, 85, 72, 0.08)",
-            selected: "rgba(121, 85, 72, 0.14)",
-            disabled: "rgba(47, 37, 33, 0.35)",
-            disabledBackground: "rgba(121, 85, 72, 0.10)",
-        },
+        divider: "#D8C8B8",
 
         success: {
-            main: "#667A57",
+            main: "#5E7A61",
         },
 
         warning: {
-            main: "#B9823D",
+            main: "#B68445",
         },
 
         error: {
-            main: "#B55245",
+            main: "#9D4B3E",
         },
 
-        info: {
-            main: "#6A7B83",
-        },
-    },
-
-    shape: {
-        borderRadius: 10,
-    },
-
-    typography: {
-        fontFamily: `"Inter", "Roboto", "Helvetica", "Arial", sans-serif`,
-    },
-
-    components: {
-        MuiButton: {
-            styleOverrides: {
-                root: {
-                    textTransform: "none",
-                    borderRadius: 8,
-                },
-            },
-        },
-
-        MuiPaper: {
-            styleOverrides: {
-                root: {
-                    backgroundImage: "none",
-                },
-            },
+        chess: {
+            light: "#D8C2A8",
+            dark: "#6B4A3A",
+            lightHover: "#E4D2BC",
+            darkHover: "#7A5745",
+            selected: "#B98B5F",
+            possibleMove: "#8B715E",
+            background: "#211814",
+            surface: "#30231D",
+            accent: "#C99B68",
         },
     },
 });
