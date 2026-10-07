@@ -17,6 +17,7 @@ import { CreateGameResponseDto } from "./dto/createGameResponse.dto";
 import { randomInt } from "crypto";
 import { GameState } from "../generated/prisma/enums";
 import { ClockService } from "../clock/clock.service";
+import { describeTimeControl } from "../clock/time-control";
 
 const MAX_INITIAL_TIME_MS = 180 * 60 * 1000
 const MAX_INCREMENT_MS = 180 * 1000
@@ -82,6 +83,7 @@ export class GamesService {
           : body.playerOneUsername,
         initialTimeMs: initialTimeMs,
         incrementMs: incrementMs,
+        timeCategory: describeTimeControl(initialTimeMs, incrementMs).timeCategory,
         turnStartedAt: null,
         whiteRemainingMs: initialTimeMs === 0 ? incrementMs : initialTimeMs,
         blackRemainingMs: initialTimeMs === 0 ? incrementMs : initialTimeMs,
@@ -444,6 +446,8 @@ export class GamesService {
       finishedAt: game.finishedAt,
       initialTimeMs: game.initialTimeMs,
       incrementMs: game.incrementMs,
+      timeCategory: game.timeCategory,
+      timeLabel: describeTimeControl(game.initialTimeMs, game.incrementMs).timeLabel,
       whiteRemainingMs,
       blackRemainingMs,
       firstMoveRemainingMs,
