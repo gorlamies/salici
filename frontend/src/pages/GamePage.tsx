@@ -197,14 +197,7 @@ function GamePage() {
       setErrorMessage(error.message);
     }
 
-    setMode("game");
-    setTopTime(topTime);
-    setBottomTime(bottomTime);
-    setTopRunning(topRunning);
-    setBottomRunning(bottomRunning);
 
-    setTransitioning(false);
-    setOnMove(handleMove);
     setOnResign(() => handleResign)
 
     socket.auth = { token: accessToken };
@@ -217,15 +210,39 @@ function GamePage() {
     socket.connect();
 
     return () => {
-      setOnMove(null);
-      setOnResign(null);
+
       socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
       socket.off("game.error", handleError);
       socket.disconnect();
     };
-  }, [gameId, accessToken, username, navigate, refresh, topTime, bottomTime, topRunning, bottomRunning,]);
+  }, [accessToken, username, navigate, refresh]);
+
+
+  useEffect(() => {
+    setTopTime(topTime);
+    setBottomTime(bottomTime);
+    setTopRunning(topRunning);
+    setBottomRunning(bottomRunning);
+  }, [
+    topTime,
+    bottomTime,
+    topRunning,
+    bottomRunning,
+  ]);
+
+  useEffect(() => {
+    setMode("game");
+    setTransitioning(false);
+    setOnMove(handleMove);
+    setOnResign(() => handleResign);
+
+    return () => {
+      setOnMove(null);
+      setOnResign(null);
+    };
+  }, [gameId]);
 
   const handleMove = useCallback((from: SquareName, to: SquareName) => {
     socket.emit("game.move", {

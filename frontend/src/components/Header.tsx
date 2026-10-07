@@ -87,7 +87,7 @@ export default function Header() {
             socket.off("game.created", handleGameCreated);
             socket.disconnect();
         };
-    }, [accessToken, authFetch, navigate, refresh]);
+    }, [accessToken, refresh,]);
 
 
 

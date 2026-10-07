@@ -77,6 +77,7 @@ export class GameTimeoutService {
                     id: game.id,
                     state: game.state,
                     turnStartedAt: game.turnStartedAt,
+                    finishedAt: null,
                 },
                 data: isReadyPhase
                     ? {
