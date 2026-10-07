@@ -36,6 +36,9 @@ export class AuthService {
       where: {
         username: dto.username,
       },
+      omit: {
+        passwordhash: false,
+      },
     });
 
     if (!user) {
