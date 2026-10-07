@@ -28,6 +28,14 @@ enum GameState {
   seventy_five_move_rule
 }
 
+enum TimeCategory {
+  bullet
+  blitz
+  rapid
+  classical
+  unlimited
+}
+
 model Game {
   id         String   @id @default(cuid())
   state      GameState @default(ready)
@@ -49,6 +57,15 @@ model Game {
   whiteRemainingMs Int?
   blackRemainingMs Int?
   turnStartedAt DateTime?
+
+  timeCategory TimeCategory @default(unlimited)
+  whiteRatingBefore Int?
+  whiteRatingAfter Int?
+  blackRatingBefore Int?
+  blackRatingAfter Int?
+
+  @@index([whitePlayerUsername, createdAt])
+  @@index([blackPlayerUsername, createdAt])
 }
 
 model Move {
@@ -75,6 +92,39 @@ model User {
   email        String @unique
   passwordhash String
 
+  createdAt DateTime @default(now())
+  closedAt DateTime?
+  hideOnlineStatus Boolean @default(false)
+
   gamesAsWhite Game[] @relation("WhitePlayer")
   gamesAsBlack Game[] @relation("BlackPlayer")
+
+  follower Follow[] @relation("Followed")
+  followed Follow[] @relation("Follower")
+  ratings Rating[]
+}
+
+model Follow {
+  followerUsername String
+  followedUsername String
+  createdAt DateTime @default(now())
+
+  followed User @relation("Followed", fields: [followedUsername], references: [username], onDelete: Cascade)
+  follower User @relation("Follower", fields: [followerUsername], references: [username], onDelete: Cascade)
+
+  @@id([followerUsername, followedUsername])
+  @@index([followedUsername])
+}
+
+model Rating {
+  username String
+  timeCategory TimeCategory
+  rating Float @default(1500)
+  deviation Float @default(350)
+  volatility Float @default(0.06)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [username], references: [username], onDelete: Cascade)
+
+  @@id([username, timeCategory])
 }
