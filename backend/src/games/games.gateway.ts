@@ -65,6 +65,9 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
   }
 
   async handleConnection(client: Socket) {
+    console.log(
+      `[WS CONNECT] backend=${process.env.HOSTNAME} socket=${client.id}`,
+    );
     await client.join(userRoom(client.data.user.sub));
   }
 
