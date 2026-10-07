@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { setupSwagger } from "./swagger/swagger";
+import { RedisIoAdapter } from "./redis-io.adapter";
 import cookieParser from "cookie-parser";
 
 async function bootstrap() {
@@ -11,6 +12,9 @@ async function bootstrap() {
     origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
     credentials: true,
   });
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   setupSwagger(app);
   await app.listen(port);
