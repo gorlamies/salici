@@ -1,15 +1,12 @@
 import { Box, Button, Fade, Stack, TextField, ToggleButton, ToggleButtonGroup, styled } from "@mui/material";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import type { MenuState } from "../types/menu";
-import { createGame, getOpenGames, type Game } from "../api/games"
+import { createGame } from "../api/games"
 import { useAuth } from "../context/AuthContext";
-import { socket } from "../socket";
-import GameNotifications from "../components/GameNotifications";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { useBoardTransition } from "../context/BoardTransitionContext";
-import HomeBackground from "../components/HomeBackground";
-import BoardStage from "../components/BoardStage";
+
 
 const TRANSITION_MS = 700;
 
@@ -30,16 +27,14 @@ function HomePage() {
 
   const [menuState, setMenuState] = useState<MenuState>("main");
   const [opponent, setOpponent] = useState<string>("");
-  const [openGames, setOpenGames] = useState<Game[]>([]);
   const [time, setTime] = useState<string>("");
   const [gameMinutesMs, setGameMinutesMs] = useState<number | null>(null);
   const [gameIncrementMs, setGameIncrementMs] = useState<number | null>(null);
 
 
-  const { accessToken, username, refresh } = useAuth();
+  const { accessToken, username } = useAuth();
   const navigate = useNavigate();
   const authFetch = useAuthenticatedFetch();
-  const refreshAttempted = useRef(false);
   const { setMode, setTransitioning, transitioning } = useBoardTransition();
 
 
@@ -69,66 +64,7 @@ function HomePage() {
   useEffect(() => {
     setMode("home");
     setTransitioning(false);
-
-    async function handleConnect() {
-      try {
-        setOpenGames(await getOpenGames(authFetch));
-      }
-      catch {
-        console.log("error while retrieving open games");
-      }
-    }
-
-    function handleGameCreated(game: Game) {
-      // add the game if it's not already in
-      setOpenGames(prev =>
-        prev.some(g => g.id === game.id)
-          ? prev
-          : [game, ...prev],
-      );
-    }
-
-    async function handleConnectionError(error: Error) {
-      const connectionError = error as Error & {
-        data?: {
-          status_code: number;
-          message: string;
-        };
-      };
-      if (connectionError.data?.status_code !== 401) {
-        console.log(connectionError.message);
-        return;
-      }
-
-      if (refreshAttempted.current) {
-        console.error("Authentication failed after refreshing.");
-        navigate("/auth")
-        return;
-      }
-
-      refreshAttempted.current = true;
-      try {
-        await refresh();
-      } catch {
-        return;
-      }
-    }
-
-    socket.auth = { token: accessToken };
-
-    socket.on("connect", handleConnect);
-    socket.on("connect_error", handleConnectionError);
-    socket.on("game.created", handleGameCreated);
-
-    socket.connect();
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("connect_error", handleConnectionError);
-      socket.off("game.created", handleGameCreated);
-      socket.disconnect();
-    };
-  }, [accessToken, navigate, refresh, setMode, setTransitioning]);
+  }, [setMode, setTransitioning]);
 
 
   return (
