@@ -415,9 +415,8 @@ export default function ProfilePage() {
 
     return (
         // the content area of the app does not scroll: the page has its own scroll.
-        // zIndex 2: the shared board layer (zIndex 1) is only transparent in "hidden" mode,
         // it still covers the center of the screen and would take the clicks
-        <Box sx={{ position: "absolute", inset: 0, overflowY: "auto", zIndex: 2 }}>
+        <Box sx={{ position: "absolute", inset: 0, overflowY: "auto", zIndex: 0 }}>
             <Stack spacing={3} sx={{ maxWidth: 820, mx: "auto", p: 3 }}>
 
                 <Paper variant="outlined" sx={{ p: 3 }}>

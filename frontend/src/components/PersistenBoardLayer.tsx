@@ -36,10 +36,11 @@ export default function PersistentBoardLayer() {
                 transform: "translate(-50%, -50%)",
 
                 opacity: mode === "hidden" ? 0 : 1,
+                zIndex: mode === "hidden" ? 0 : -1,
                 transition:
                     "left 700ms cubic-bezier(0.22, 1, 0.36, 1)",
 
-                zIndex: 1,
+
 
             }}
         >
