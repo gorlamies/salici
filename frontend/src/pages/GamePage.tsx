@@ -51,11 +51,9 @@ function GamePage() {
     setOnResign,
   } = useBoardTransition();
 
-  const navigate = useNavigate();
   const { gameId } = useParams();
-  const { accessToken, username, refresh } = useAuth();
+  const { username } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [moves, setMoves] = useState<Move[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [blackTimeMs, setBlackTimeMs] = useState<number | null>(null)
@@ -92,7 +90,6 @@ function GamePage() {
       setBlackTimeMs(game.blackRemainingMs)
       setWhiteTimeMs(game.whiteRemainingMs)
       setFirstMoveMs(game.firstMoveRemainingMs)
-      setMoves(game.moves);
 
       // control the move to arrive
       if (game.currentFen !== game.initialFen && (game.state === "running" || game.state === "ready")) {

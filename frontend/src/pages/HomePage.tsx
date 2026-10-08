@@ -10,7 +10,7 @@ import { useBoardTransition } from "../context/BoardTransitionContext";
 
 const TRANSITION_MS = 700;
 
-const MenuButton = styled(Button)(({ theme }) => ({
+const MenuButton = styled(Button)(() => ({
   transition: "transform 200ms ease, box-shadow 200ms ease",
 
   "&:hover": {
