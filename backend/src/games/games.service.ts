@@ -18,6 +18,7 @@ import { randomInt } from "crypto";
 import { GameState } from "../generated/prisma/enums";
 import { ClockService } from "../clock/clock.service";
 import { describeTimeControl } from "../clock/time-control";
+import { RatingService } from "../rating/rating.service";
 
 const MAX_INITIAL_TIME_MS = 180 * 60 * 1000
 const MAX_INCREMENT_MS = 180 * 1000
@@ -28,6 +29,7 @@ export class GamesService {
     private readonly chessService: ChessService,
     private readonly prismaService: PrismaService,
     private readonly clockService: ClockService,
+    private readonly ratingService: RatingService,
   ) { }
 
   async createGame(
@@ -144,7 +146,7 @@ export class GamesService {
     }
 
     try {
-      return await this.prismaService.$transaction(async (tx) => {
+      const movedGame = await this.prismaService.$transaction(async (tx) => {
         const now = new Date();
         const game = await tx.game.findUnique({ where: { id } });
 
@@ -168,13 +170,13 @@ export class GamesService {
           throw new ForbiddenException("Unauthorized move");
         }
 
-        // the full history is needed to detect rules that depend on the past (threefold repetition), so the game is replayed from its first position.
+        // the full history is needed to detect rules that depend on the past (threefold repetition), so the game is replayed from its first position
         const previousMoves = await tx.move.findMany({
           where: { gameId: id },
           orderBy: { moveNumber: "asc" },
         });
 
-        // clock: null for games without a clock
+        // clock null for games without a clock
         let newRemainingMs: number | null = null;
         const hasClock =
           game.initialTimeMs !== null &&
@@ -197,7 +199,7 @@ export class GamesService {
             isReadyPhase,
           );
 
-          // time is over: move is not applied
+          // if the time is over the move is not applied
           if (msBeforeEvent <= 0) {
             const finishedGame = await tx.game.update({
               where: { id },
@@ -275,6 +277,12 @@ export class GamesService {
 
         return this.toGameDto(updatedGame, [...previousMoves, createdMove]);
       });
+
+      // checkmate, draw or time out during this move: update the ratings
+      if (movedGame.finishedAt !== null) {
+        await this.ratingService.rateGame(id);
+      }
+      return movedGame;
     } catch (error) {
       if ((error as { code?: string })?.code === "P2002") {
         throw new ConflictException(
@@ -315,6 +323,8 @@ export class GamesService {
 
     if (result.count === 0)
       throw new ConflictException("The game is not running."); // 409
+
+    await this.ratingService.rateGame(id);
 
     const updatedGame = this.getGame(id);
     return updatedGame;
