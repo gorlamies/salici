@@ -11,6 +11,9 @@ export type Move = {
   createdAt: string;
 };
 
+// same values as the TimeCategory enum of the backend
+export type TimeCategory = "bullet" | "blitz" | "rapid" | "classical" | "unlimited";
+
 export type Game = {
   id: string;
   state: string;
@@ -22,6 +25,8 @@ export type Game = {
   blackPlayerUsername: string | null;
   initialTimeMs: number | null;
   incrementMs: number | null;
+  timeCategory: TimeCategory;
+  timeLabel: string;
   whiteRemainingMs: number | null;
   blackRemainingMs: number | null;
   firstMoveRemainingMs: number | null;

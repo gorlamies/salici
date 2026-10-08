@@ -5,6 +5,7 @@ import { GamesGateway } from './games.gateway';
 import { GameState } from '../generated/prisma/enums';
 import { GamesService } from './games.service';
 import { ClockService } from '../clock/clock.service';
+import { RatingService } from '../rating/rating.service';
 
 @Injectable()
 export class GameTimeoutService {
@@ -13,7 +14,7 @@ export class GameTimeoutService {
         private readonly gamesGateway: GamesGateway,
         private readonly gamesService: GamesService,
         private readonly clockService: ClockService,
-
+        private readonly ratingService: RatingService,
     ) { }
 
     @Cron('* * * * * *', {
@@ -98,6 +99,9 @@ export class GameTimeoutService {
             if (result.count === 0) {
                 continue;
             }
+
+            // a time out counts for the ratings (aborted game is ignored by rateGame)
+            await this.ratingService.rateGame(game.id);
 
             const updatedGame =
                 await this.gamesService.getGame(game.id);

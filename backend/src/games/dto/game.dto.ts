@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { MoveDto } from "./move.dto";
+import { TimeCategory } from "../../generated/prisma/enums";
 
 export class GameDto {
   @ApiProperty()
@@ -31,6 +32,12 @@ export class GameDto {
 
   @ApiProperty({ nullable: true, type: Number })
   incrementMs!: number | null;
+
+  @ApiProperty({ enum: TimeCategory, enumName: "TimeCategory" })
+  timeCategory!: TimeCategory;
+
+  @ApiProperty({ example: "3+2" })
+  timeLabel!: string;
 
   @ApiProperty({ nullable: true, type: Number })
   whiteRemainingMs!: number | null;

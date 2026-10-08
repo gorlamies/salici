@@ -7,10 +7,12 @@ import { GamesGateway } from './games.gateway'
 import { AuthModule } from '../auth/auth.module';
 import { ClockModule } from '../clock/clock.module';
 import { GameTimeoutService } from './games.timeout.service';
+import { RatingModule } from '../rating/rating.module';
 
 @Module({
-  imports: [ChessModule, DatabaseModule, AuthModule, ClockModule,],
+  imports: [ChessModule, DatabaseModule, AuthModule, ClockModule, RatingModule],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway, GameTimeoutService],
+  exports: [GamesGateway],
 })
 export class GamesModule { }

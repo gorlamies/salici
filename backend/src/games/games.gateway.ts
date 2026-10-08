@@ -3,6 +3,7 @@ import {
   MessageBody,
   OnGatewayInit,
   OnGatewayConnection,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -13,6 +14,8 @@ import { ExtendedError, Server, Socket } from "socket.io";
 import { GamesService } from "./games.service";
 import { ChessMoveInput } from "../chess/chess.types";
 import { GameDto } from "./dto/game.dto";
+import { PrismaService } from "../database/prisma.service";
+
 
 type JoinPayload = { gameId: string };
 type MovePayload = { gameId: string; move: ChessMoveInput };
@@ -28,13 +31,14 @@ function userRoom(username: string): string {
 @WebSocketGateway({
   cors: { origin: process.env.FRONTEND_URL ?? "http://localhost:5173" },
 })
-export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
+export class GamesGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
   constructor(
     private readonly gamesService: GamesService,
     private readonly jwtService: JwtService,
+    private readonly prismaService: PrismaService,
   ) { }
 
   // executed for every new connection
@@ -69,6 +73,73 @@ export class GamesGateway implements OnGatewayInit, OnGatewayConnection {
       `[WS CONNECT] backend=${process.env.HOSTNAME} socket=${client.id}`,
     );
     await client.join(userRoom(client.data.user.sub));
+
+    // for the first socket the user is set as online
+    try {
+      const sockets = await this.server.in(userRoom(client.data.user.sub)).fetchSockets();
+      if (sockets.length === 1 && !(await this.isHidden(client.data.user.sub))) {
+        await this.notifyFollowers(client.data.user.sub, true);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async handleDisconnect(client: Socket) {
+    const username: string | undefined = client.data.user?.sub;
+    if (!username) return;
+
+    try {
+      const sockets = await this.server.in(userRoom(username)).fetchSockets();
+      if (sockets.length === 0 && !(await this.isHidden(username))) {
+        await this.notifyFollowers(username, false);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  /**
+   * Returns which of the given users are connected (on any backend instance).
+   * The users who hide their online status must be removed by the caller.
+   */
+  async findOnline(usernames: string[]): Promise<Set<string>> {
+    if (usernames.length === 0) return new Set();
+    const sockets = await this.server.in(usernames.map(userRoom)).fetchSockets();
+    return new Set(sockets.map((socket) => socket.data.user.sub as string));
+  }
+
+  // called when a user changes hideOnlineStatus: the followers see the change immediately
+  async notifyOnlineStatusVisibility(username: string, hidden: boolean) {
+    if (hidden) {
+      await this.notifyFollowers(username, false);
+      return;
+    }
+    const online = await this.findOnline([username]);
+    if (online.has(username)) {
+      await this.notifyFollowers(username, true);
+    }
+  }
+
+  // sends friend.online / friend.offline to everyone who follows the user
+  private async notifyFollowers(username: string, online: boolean) {
+    const follows = await this.prismaService.follow.findMany({
+      where: { followedUsername: username },
+      select: { followerUsername: true },
+    });
+    if (follows.length === 0) return;
+
+    this.server
+      .to(follows.map((follow) => userRoom(follow.followerUsername)))
+      .emit(online ? "friend.online" : "friend.offline", { username });
+  }
+
+  private async isHidden(username: string): Promise<boolean> {
+    const user = await this.prismaService.user.findUnique({
+      where: { username },
+      select: { hideOnlineStatus: true },
+    });
+    return user?.hideOnlineStatus ?? true;
   }
 
   notifyGameCreation(game: GameDto) {
