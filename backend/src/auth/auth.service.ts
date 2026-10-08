@@ -41,7 +41,8 @@ export class AuthService {
       },
     });
 
-    if (!user) {
+    // a closed account fails like a wrong username
+    if (!user || user.closedAt !== null) {
       throw new UnauthorizedException("Invalid username or password");
     }
 
@@ -92,6 +93,16 @@ export class AuthService {
     }
 
     const username = payload.sub;
+
+    // check if the account is closed, in that case the token is not valid
+    const user = await this.prismaService.user.findUnique({
+      where: { username },
+      select: { closedAt: true },
+    });
+    if (!user || user.closedAt !== null) {
+      throw new UnauthorizedException("Invalid or expired refresh token");
+    }
+
     const accessToken = await this.jwtService.signAsync(
       {
         sub: username, // better than dto.username

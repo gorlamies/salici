@@ -85,3 +85,63 @@ export async function getProfileGames(
 
     return await response.json();
 }
+
+async function throwResponseError(response: Response): Promise<never> {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.message ?? `Request failed: ${response.status}`);
+}
+
+export async function changePassword(
+    currentPassword: string,
+    newPassword: string,
+    authFetch: AuthFetch
+): Promise<void> {
+    const response = await authFetch(backend_url + "/profile/me/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!response.ok) await throwResponseError(response);
+}
+
+export async function changeEmail(
+    currentPassword: string,
+    newEmail: string,
+    authFetch: AuthFetch
+): Promise<string> {
+    const response = await authFetch(backend_url + "/profile/me/email", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newEmail }),
+    });
+    if (!response.ok) await throwResponseError(response);
+    const data = await response.json();
+    return data.email;
+}
+
+export async function updateSettings(
+    hideOnlineStatus: boolean,
+    authFetch: AuthFetch
+): Promise<boolean> {
+    const response = await authFetch(backend_url + "/profile/me/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hideOnlineStatus }),
+    });
+    if (!response.ok) await throwResponseError(response);
+    const data = await response.json();
+    return data.hideOnlineStatus;
+}
+
+export async function closeAccount(
+    currentPassword: string,
+    authFetch: AuthFetch
+): Promise<void> {
+    const response = await authFetch(backend_url + "/profile/me/close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword }),
+        credentials: "include", // the response clears the refresh token cookie
+    });
+    if (!response.ok) await throwResponseError(response);
+}

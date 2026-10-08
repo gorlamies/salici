@@ -5,22 +5,40 @@ import {
     ButtonBase,
     Chip,
     CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControlLabel,
     Paper,
     Stack,
+    Switch,
+    TextField,
     ToggleButton,
     ToggleButtonGroup,
     Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
-import { getProfile, getProfileGames, type GameSummary, type Profile } from "../api/profile";
+import {
+    changeEmail,
+    changePassword,
+    closeAccount,
+    getProfile,
+    getProfileGames,
+    updateSettings,
+    type GameSummary,
+    type Profile,
+} from "../api/profile";
 import type { TimeCategory } from "../api/games";
 import type { FenPiece, SquareName } from "../types/chess";
 import { useAuth } from "../context/AuthContext";
 import { logout } from "../api/auth";
 import { useBoardTransition } from "../context/BoardTransitionContext";
 import { parseFen } from "./GamePage";
+
+type AuthFetch = ReturnType<typeof useAuthenticatedFetch>;
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const ranks = [8, 7, 6, 5, 4, 3, 2, 1] as const;
@@ -113,12 +131,152 @@ function describeResult(game: GameSummary, ownerIsWhite: boolean): { text: strin
         : { text: "Loss", color: "error.main" };
 }
 
+// settings of your own account: password, email, online status, close account
+function AccountSettings({
+    profile,
+    authFetch,
+    onProfileChange,
+    onAccountClosed,
+}: {
+    profile: Profile;
+    authFetch: AuthFetch;
+    onProfileChange: (profile: Profile) => void;
+    onAccountClosed: () => void;
+}) {
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [passwordMessage, setPasswordMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+    const [emailPassword, setEmailPassword] = useState("");
+    const [newEmail, setNewEmail] = useState("");
+    const [emailMessage, setEmailMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+    const [closeOpen, setCloseOpen] = useState(false);
+    const [closePassword, setClosePassword] = useState("");
+    const [closeError, setCloseError] = useState<string | null>(null);
+
+    async function handlePasswordChange(event: SyntheticEvent) {
+        event.preventDefault();
+        try {
+            await changePassword(currentPassword, newPassword, authFetch);
+            setPasswordMessage({ ok: true, text: "Password changed." });
+            setCurrentPassword("");
+            setNewPassword("");
+        } catch (error) {
+            setPasswordMessage({ ok: false, text: (error as Error).message });
+        }
+    }
+
+    async function handleEmailChange(event: SyntheticEvent) {
+        event.preventDefault();
+        try {
+            const email = await changeEmail(emailPassword, newEmail, authFetch);
+            onProfileChange({ ...profile, email });
+            setEmailMessage({ ok: true, text: "Email changed." });
+            setEmailPassword("");
+            setNewEmail("");
+        } catch (error) {
+            setEmailMessage({ ok: false, text: (error as Error).message });
+        }
+    }
+
+    async function handleHideOnlineChange(hide: boolean) {
+        try {
+            const hideOnlineStatus = await updateSettings(hide, authFetch);
+            onProfileChange({ ...profile, hideOnlineStatus });
+        } catch {
+            // the switch stays as it was
+        }
+    }
+
+    async function handleClose(event: SyntheticEvent) {
+        event.preventDefault();
+        try {
+            await closeAccount(closePassword, authFetch);
+            onAccountClosed();
+        } catch (error) {
+            setCloseError((error as Error).message);
+        }
+    }
+
+    return (
+        <Paper variant="outlined" sx={{ p: 3 }}>
+            <Stack spacing={3}>
+                <Typography variant="h5">Settings</Typography>
+
+                {/* a real form, as in AuthPage: the browser checks the required fields */}
+                <Stack component="form" onSubmit={handlePasswordChange} spacing={1.5}>
+                    <Typography variant="subtitle1">Change password</Typography>
+                    <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", rowGap: 1.5 }}>
+                        <TextField size="small" type="password" label="Current password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
+                        <TextField size="small" type="password" label="New password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
+                        <Button type="submit" variant="contained">Change</Button>
+                    </Stack>
+                    {passwordMessage && (
+                        <Alert severity={passwordMessage.ok ? "success" : "error"}>{passwordMessage.text}</Alert>
+                    )}
+                </Stack>
+
+                {/* type="email": the browser checks the format, as in the signup form */}
+                <Stack component="form" onSubmit={handleEmailChange} spacing={1.5}>
+                    <Typography variant="subtitle1">Change email</Typography>
+                    <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", rowGap: 1.5 }}>
+                        <TextField size="small" type="email" label="New email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} required />
+                        <TextField size="small" type="password" label="Current password" value={emailPassword} onChange={(event) => setEmailPassword(event.target.value)} required />
+                        <Button type="submit" variant="contained">Change</Button>
+                    </Stack>
+                    {emailMessage && (
+                        <Alert severity={emailMessage.ok ? "success" : "error"}>{emailMessage.text}</Alert>
+                    )}
+                </Stack>
+
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={profile.hideOnlineStatus ?? false}
+                            onChange={(event) => handleHideOnlineChange(event.target.checked)}
+                        />
+                    }
+                    label="Hide my online status"
+                />
+
+                <Box>
+                    <Button variant="outlined" color="error" onClick={() => setCloseOpen(true)}>
+                        Close account
+                    </Button>
+                </Box>
+            </Stack>
+
+            <Dialog
+                open={closeOpen}
+                onClose={() => setCloseOpen(false)}
+                slotProps={{ paper: { component: "form", onSubmit: handleClose } }}
+            >
+                <DialogTitle>Close your account?</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ pt: 1 }}>
+                        <Typography>
+                            You will not be able to log in again. Your games stay visible.
+                        </Typography>
+                        <TextField size="small" type="password" label="Current password" value={closePassword} onChange={(event) => setClosePassword(event.target.value)} required />
+                        {closeError && <Alert severity="error">{closeError}</Alert>}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setCloseOpen(false)}>Cancel</Button>
+                    <Button type="submit" color="error" variant="contained">Close account</Button>
+                </DialogActions>
+            </Dialog>
+        </Paper>
+    );
+}
+
 export default function ProfilePage() {
 
     const navigate = useNavigate();
     // the route is /profile/:UserId, the value is a username
     const { UserId: profileUsername } = useParams();
-    const { username, setAccessToken } = useAuth();
+    const { username, setAccessToken, setUsername } = useAuth();
     const authFetch = useAuthenticatedFetch();
     const { setMode } = useBoardTransition();
 
@@ -212,6 +370,14 @@ export default function ProfilePage() {
     async function handleLogout() {
         await logout();
         setAccessToken(null);
+        setUsername(null);
+        navigate("/");
+    }
+
+    // the backend already removed the refresh token cookie
+    function handleAccountClosed() {
+        setAccessToken(null);
+        setUsername(null);
         navigate("/");
     }
 
@@ -278,6 +444,15 @@ export default function ProfilePage() {
                         ))}
                     </Stack>
                 </Paper>
+
+                {isOwnProfile && (
+                    <AccountSettings
+                        profile={profile}
+                        authFetch={authFetch}
+                        onProfileChange={setProfile}
+                        onAccountClosed={handleAccountClosed}
+                    />
+                )}
 
                 <Stack spacing={1.5}>
                     <Typography variant="h5">Games</Typography>

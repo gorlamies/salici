@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+    ConflictException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
+import * as argon2 from "argon2";
 import { PrismaService } from "../database/prisma.service";
 import { GameState, TimeCategory } from "../generated/prisma/enums";
 import { describeTimeControl } from "../clock/time-control";
@@ -9,6 +15,7 @@ import {
 } from "../rating/rating.constants";
 import { ProfileDto, RatingDto } from "./dto/profile.dto";
 import { GameSummaryDto, ProfileGamesDto } from "./dto/profileGames.dto";
+import { EmailDto, SettingsDto } from "./dto/account.dto";
 
 @Injectable()
 export class ProfileService {
@@ -144,5 +151,60 @@ export class ProfileService {
             games: summaries,
             nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
         };
+    }
+
+    async changePassword(username: string, currentPassword: string, newPassword: string): Promise<void> {
+        await this.checkPassword(username, currentPassword);
+        await this.prismaService.user.update({
+            where: { username },
+            data: { passwordhash: await argon2.hash(newPassword) },
+        });
+    }
+
+    async changeEmail(username: string, currentPassword: string, newEmail: string): Promise<EmailDto> {
+        await this.checkPassword(username, currentPassword);
+        try {
+            const user = await this.prismaService.user.update({
+                where: { username },
+                data: { email: newEmail },
+                select: { email: true },
+            });
+            return { email: user.email };
+        } catch (error) {
+            // P2002: the unique constraint on the email failed
+            if ((error as { code?: string })?.code === "P2002") {
+                throw new ConflictException("Email already in use"); // 409
+            }
+            throw error;
+        }
+    }
+
+    async updateSettings(username: string, hideOnlineStatus: boolean): Promise<SettingsDto> {
+        const user = await this.prismaService.user.update({
+            where: { username },
+            data: { hideOnlineStatus },
+            select: { hideOnlineStatus: true },
+        });
+        return { hideOnlineStatus: user.hideOnlineStatus };
+    }
+
+    // the account is not deleted: closedAt is set, the user can no longer log in
+    async closeAccount(username: string, currentPassword: string): Promise<void> {
+        await this.checkPassword(username, currentPassword);
+        await this.prismaService.user.update({
+            where: { username },
+            data: { closedAt: new Date() },
+        });
+    }
+
+    private async checkPassword(username: string, password: string): Promise<void> {
+        const user = await this.prismaService.user.findUnique({
+            where: { username },
+            select: { passwordhash: true, closedAt: true },
+        });
+
+        if (!user || user.closedAt !== null || !(await argon2.verify(user.passwordhash, password))) {
+            throw new ForbiddenException("Wrong password"); // 403
+        }
     }
 }
