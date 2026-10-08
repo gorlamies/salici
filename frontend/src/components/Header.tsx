@@ -12,10 +12,9 @@ import FriendsMenu from "./FriendsMenu";
 
 export default function Header() {
     const [openGames, setOpenGames] = useState<Game[]>([]);
-    const { accessToken, username, refresh } = useAuth();
+    const { accessToken, username } = useAuth();
     const authFetch = useAuthenticatedFetch();
     const navigate = useNavigate()
-    const refreshAttempted = useRef(false);
     const isLoggedIn = Boolean(accessToken);
 
     function handleUserIconClick() {
@@ -33,7 +32,6 @@ export default function Header() {
         }
 
         async function handleConnect() {
-            refreshAttempted.current = false;
             try {
                 setOpenGames(await getOpenGames(authFetch));
             }
@@ -50,45 +48,19 @@ export default function Header() {
             );
         }
 
-        async function handleConnectionError(error: Error) {
-            const connectionError = error as Error & {
-                data?: {
-                    status_code: number;
-                    message: string;
-                };
-            };
-            if (connectionError.data?.status_code !== 401) {
-                console.log(connectionError.message);
-                return;
-            }
-
-            if (refreshAttempted.current) {
-                return;
-            }
-
-            refreshAttempted.current = true;
-            try {
-                await refresh();
-            } catch {
-                return;
-            }
-        }
-
-        socket.auth = { token: accessToken };
 
         socket.on("connect", handleConnect);
-        socket.on("connect_error", handleConnectionError);
         socket.on("game.created", handleGameCreated);
 
-        socket.connect();
+        if (socket.connected) {
+            handleConnect();
+        }
 
         return () => {
             socket.off("connect", handleConnect);
-            socket.off("connect_error", handleConnectionError);
             socket.off("game.created", handleGameCreated);
-            socket.disconnect();
         };
-    }, [accessToken, refresh,]);
+    }, [accessToken, authFetch,]);
 
 
 

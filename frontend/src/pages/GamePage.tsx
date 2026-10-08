@@ -44,7 +44,6 @@ function GamePage() {
     setFen,
     setOnMove,
     setTransitioning,
-
     setTopTime,
     setBottomTime,
     setTopRunning,
@@ -55,7 +54,6 @@ function GamePage() {
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { accessToken, username, refresh } = useAuth();
-  const refreshAttempted = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [moves, setMoves] = useState<Move[]>([]);
   const [gameOver, setGameOver] = useState(false);
@@ -65,7 +63,6 @@ function GamePage() {
   const [firstMoveMs, setFirstMoveMs] = useState<number | null>(null)
   const [activeColor, setActiveColor] = useState<"w" | "b">("w");
   const [clocksStarted, setClocksStarted] = useState(false);
-  const [currentFen, setCurrentfen] = useState<string>("")
 
 
   const bottomColor = color === "b" ? "b" : "w";
@@ -79,7 +76,6 @@ function GamePage() {
   useEffect(() => {
 
     function handleConnect() {
-      refreshAttempted.current = false;
       socket.emit("game.join", { gameId });
     }
 
@@ -87,7 +83,7 @@ function GamePage() {
 
       setErrorMessage(null);
       setPosition(parseFen(game.currentFen));
-      setCurrentfen(game.currentFen)
+      setFen(game.currentFen)
 
       if (game.whitePlayerUsername === username) setColor("W");
       else if (game.blackPlayerUsername === username) setColor("b");
@@ -167,82 +163,49 @@ function GamePage() {
       }
     }
 
-    async function handleConnectionError(error: Error) {
-      const connectionError = error as Error & {
-        data?: {
-          status_code: number;
-          message: string;
-        };
-      };
-      if (connectionError.data?.status_code !== 401) {
-        console.log(connectionError.message);
-        return;
-      }
-
-      if (refreshAttempted.current) {
-        console.error("Authentication failed after refreshing.");
-        navigate("/auth")
-        return;
-      }
-
-      refreshAttempted.current = true;
-      try {
-        await refresh();
-      } catch {
-        return;
-      }
-    }
-
     function handleError(error: { message: string }) {
       setErrorMessage(error.message);
     }
 
-
-    setOnResign(() => handleResign)
-
-    socket.auth = { token: accessToken };
-
     socket.on("connect", handleConnect);
-    socket.on("connect_error", handleConnectionError);
     socket.on("game.state", handleState);
     socket.on("game.error", handleError);
 
-    socket.connect();
+    if (socket.connected) {
+      handleConnect();
+    }
 
     return () => {
 
       socket.off("connect", handleConnect);
-      socket.off("connect_error", handleConnectionError);
       socket.off("game.state", handleState);
       socket.off("game.error", handleError);
-      socket.disconnect();
     };
-  }, [accessToken, username, navigate, refresh]);
+  }, [username, gameId]);
 
-
-  useEffect(() => {
-    setTopTime(topTime);
-    setBottomTime(bottomTime);
-    setTopRunning(topRunning);
-    setBottomRunning(bottomRunning);
-  }, [
-    topTime,
-    bottomTime,
-    topRunning,
-    bottomRunning,
-  ]);
 
   useEffect(() => {
     setMode("game");
     setTransitioning(false);
     setOnMove(handleMove);
     setOnResign(() => handleResign);
+    setTopTime(topTime);
+    setBottomTime(bottomTime);
+    setTopRunning(topRunning);
+    setBottomRunning(bottomRunning);
 
     return () => {
       setOnMove(null);
       setOnResign(null);
     };
-  }, [gameId]);
+  }, [
+    topTime,
+    bottomTime,
+    topRunning,
+    bottomRunning,
+    gameId
+  ]);
+
 
   const handleMove = useCallback((from: SquareName, to: SquareName) => {
     socket.emit("game.move", {
