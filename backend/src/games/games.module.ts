@@ -12,5 +12,6 @@ import { GameTimeoutService } from './games.timeout.service';
   imports: [ChessModule, DatabaseModule, AuthModule, ClockModule,],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway, GameTimeoutService],
+  exports: [GamesGateway],
 })
 export class GamesModule { }

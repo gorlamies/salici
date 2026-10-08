@@ -23,6 +23,7 @@ export type Profile = {
     closedAt: string | null;
     ratings: Rating[];
     ongoingGameId: string | null;
+    followedByMe: boolean;
     // only in your own profile
     email?: string;
     hideOnlineStatus?: boolean;
@@ -144,4 +145,32 @@ export async function closeAccount(
         credentials: "include", // the response clears the refresh token cookie
     });
     if (!response.ok) await throwResponseError(response);
+}
+
+export type FollowedUser = {
+    username: string;
+    online: boolean;
+};
+
+export async function followUser(username: string, authFetch: AuthFetch): Promise<void> {
+    const response = await authFetch(backend_url + "/profile/" + encodeURIComponent(username) + "/follow", {
+        method: "POST",
+    });
+    if (!response.ok) await throwResponseError(response);
+}
+
+export async function unfollowUser(username: string, authFetch: AuthFetch): Promise<void> {
+    const response = await authFetch(backend_url + "/profile/" + encodeURIComponent(username) + "/follow", {
+        method: "DELETE",
+    });
+    if (!response.ok) await throwResponseError(response);
+}
+
+// the users you follow, online first
+export async function getFollowing(authFetch: AuthFetch): Promise<FollowedUser[]> {
+    const response = await authFetch(backend_url + "/profile/me/following", {
+        method: "GET",
+    });
+    if (!response.ok) await throwResponseError(response);
+    return await response.json();
 }

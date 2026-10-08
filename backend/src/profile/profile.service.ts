@@ -1,4 +1,5 @@
 import {
+    BadRequestException,
     ConflictException,
     ForbiddenException,
     Injectable,
@@ -13,14 +14,18 @@ import {
     DEFAULT_RATING,
     PROVISIONAL_DEVIATION,
 } from "../rating/rating.constants";
-import { ProfileDto, RatingDto } from "./dto/profile.dto";
+import { FollowedUserDto, ProfileDto, RatingDto } from "./dto/profile.dto";
+import { GamesGateway } from "../games/games.gateway";
 import { GameSummaryDto, ProfileGamesDto } from "./dto/profileGames.dto";
 import { EmailDto, SettingsDto } from "./dto/account.dto";
 
 @Injectable()
 export class ProfileService {
 
-    constructor(private readonly prismaService: PrismaService) { }
+    constructor(
+        private readonly prismaService: PrismaService,
+        private readonly gamesGateway: GamesGateway,
+    ) { }
 
     /**
      * Returns the profile of a user. Private fields are included only for the owner.
@@ -46,7 +51,6 @@ export class ProfileService {
             throw new NotFoundException("User not found"); // 404
         }
 
-        // a category without a row has never been played: default values
         const ratings: RatingDto[] = Object.values(TimeCategory).map((timeCategory) => {
             const stored = user.ratings.find((rating) => rating.timeCategory === timeCategory);
             const rating = stored?.rating ?? DEFAULT_RATING;
@@ -72,12 +76,25 @@ export class ProfileService {
 
         const isOwner = viewerUsername === username;
 
+        const follow = isOwner
+            ? null
+            : await this.prismaService.follow.findUnique({
+                where: {
+                    followerUsername_followedUsername: {
+                        followerUsername: viewerUsername,
+                        followedUsername: username,
+                    },
+                },
+                select: { createdAt: true },
+            });
+
         return {
             username: user.username,
             createdAt: user.createdAt,
             closedAt: user.closedAt,
             ratings,
             ongoingGameId: ongoingGame?.id ?? null,
+            followedByMe: follow !== null,
             ...(isOwner && {
                 email: user.email,
                 hideOnlineStatus: user.hideOnlineStatus,
@@ -119,7 +136,7 @@ export class ProfileService {
             // id breaks the ties between games created in the same instant
             orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             take: limit + 1,
-            // the bookmark: start after the last game already sent
+            // start after the last game already sent
             ...(cursor !== undefined && { cursor: { id: cursor }, skip: 1 }),
             select: {
                 id: true,
@@ -185,10 +202,64 @@ export class ProfileService {
             data: { hideOnlineStatus },
             select: { hideOnlineStatus: true },
         });
+        // the followers see the change
+        await this.gamesGateway.notifyOnlineStatusVisibility(username, user.hideOnlineStatus);
         return { hideOnlineStatus: user.hideOnlineStatus };
     }
 
-    // the account is not deleted: closedAt is set, the user can no longer log in
+    async follow(followerUsername: string, followedUsername: string): Promise<void> {
+        if (followerUsername === followedUsername) {
+            throw new BadRequestException("You cannot follow yourself"); // 400
+        }
+
+        const followed = await this.prismaService.user.findUnique({
+            where: { username: followedUsername },
+            select: { closedAt: true },
+        });
+        if (!followed || followed.closedAt !== null) {
+            throw new NotFoundException("User not found"); // 404
+        }
+
+        await this.prismaService.follow.upsert({
+            where: {
+                followerUsername_followedUsername: { followerUsername, followedUsername },
+            },
+            create: { followerUsername, followedUsername },
+            update: {},
+        });
+    }
+
+    async unfollow(followerUsername: string, followedUsername: string): Promise<void> {
+        await this.prismaService.follow.deleteMany({
+            where: { followerUsername, followedUsername },
+        });
+    }
+
+    // the users followed by the logged user, online first, closed accounts skipped
+    async getFollowing(username: string): Promise<FollowedUserDto[]> {
+        const follows = await this.prismaService.follow.findMany({
+            where: { followerUsername: username },
+            select: {
+                followed: {
+                    select: { username: true, closedAt: true, hideOnlineStatus: true },
+                },
+            },
+        });
+
+        const users = follows
+            .map((follow) => follow.followed)
+            .filter((user) => user.closedAt === null);
+
+        // hides users who want to stay hidden
+        const online = await this.gamesGateway.findOnline(
+            users.filter((user) => !user.hideOnlineStatus).map((user) => user.username),
+        );
+
+        return users
+            .map((user) => ({ username: user.username, online: online.has(user.username) }))
+            .sort((a, b) => Number(b.online) - Number(a.online) || a.username.localeCompare(b.username));
+    }
+
     async closeAccount(username: string, currentPassword: string): Promise<void> {
         await this.checkPassword(username, currentPassword);
         await this.prismaService.user.update({

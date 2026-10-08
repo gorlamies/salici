@@ -3,6 +3,7 @@ import {
     Body,
     Controller,
     DefaultValuePipe,
+    Delete,
     Get,
     HttpCode,
     Param,
@@ -20,7 +21,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiQuery } from "@nestjs/swagger";
 import { ProfileService } from "./profile.service";
 import { JwtAuthGuard } from "../auth/auth.guard";
 import type { AuthenticatedRequest } from "../auth/auth.types";
-import { ProfileDto } from "./dto/profile.dto";
+import { FollowedUserDto, ProfileDto } from "./dto/profile.dto";
 import { ProfileGamesDto } from "./dto/profileGames.dto";
 import { TimeCategory } from "../generated/prisma/enums";
 import {
@@ -64,6 +65,30 @@ export class ProfileController {
             throw new BadRequestException(`limit must be between 1 and ${MAX_GAMES_PER_PAGE}`); // 400
         }
         return this.profileService.getGames(username, cursor, limit, category);
+    }
+
+    @Get("me/following")
+    @ApiOkResponse({ type: [FollowedUserDto] })
+    async getFollowing(@Req() request: AuthenticatedRequest): Promise<FollowedUserDto[]> {
+        return this.profileService.getFollowing(request.user.sub);
+    }
+
+    @Post(":username/follow")
+    @HttpCode(204)
+    async follow(
+        @Param("username") username: string,
+        @Req() request: AuthenticatedRequest,
+    ): Promise<void> {
+        await this.profileService.follow(request.user.sub, username);
+    }
+
+    @Delete(":username/follow")
+    @HttpCode(204)
+    async unfollow(
+        @Param("username") username: string,
+        @Req() request: AuthenticatedRequest,
+    ): Promise<void> {
+        await this.profileService.unfollow(request.user.sub, username);
     }
 
     @Patch("me/password")

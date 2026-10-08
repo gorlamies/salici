@@ -30,11 +30,21 @@ export class ProfileDto {
     @ApiProperty({ nullable: true, type: String })
     ongoingGameId!: string | null;
 
-    // only sent to the owner of the profile
+    // true if the logged user follows this user, self false
+    @ApiProperty()
+    followedByMe!: boolean;
+
     @ApiProperty({ required: false })
     email?: string;
 
-    // only sent to the owner of the profile
     @ApiProperty({ required: false })
     hideOnlineStatus?: boolean;
+}
+
+export class FollowedUserDto {
+    @ApiProperty()
+    username!: string;
+
+    @ApiProperty()
+    online!: boolean;
 }

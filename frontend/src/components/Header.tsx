@@ -8,6 +8,7 @@ import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { socket } from "../socket";
 import type { Game, Move } from "../api/games";
 import GameNotifications from "./GameNotifications";
+import FriendsMenu from "./FriendsMenu";
 
 export default function Header() {
     const [openGames, setOpenGames] = useState<Game[]>([]);
@@ -125,6 +126,7 @@ export default function Header() {
                     }}
                 >
 
+                    <FriendsMenu />
                     <GameNotifications games={openGames} username={username} />
                     <ButtonBase onClick={handleUserIconClick}>
                         <Stack direction="row" spacing={1} >

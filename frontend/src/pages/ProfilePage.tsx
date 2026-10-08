@@ -25,8 +25,10 @@ import {
     changeEmail,
     changePassword,
     closeAccount,
+    followUser,
     getProfile,
     getProfileGames,
+    unfollowUser,
     updateSettings,
     type GameSummary,
     type Profile,
@@ -367,6 +369,20 @@ export default function ProfilePage() {
         // profile: the bottom element exists only after the profile is loaded
     }, [profile, nextCursor, hasMore, games.length]);
 
+    async function handleFollowToggle() {
+        if (!profile) return;
+        try {
+            if (profile.followedByMe) {
+                await unfollowUser(profile.username, authFetch);
+            } else {
+                await followUser(profile.username, authFetch);
+            }
+            setProfile({ ...profile, followedByMe: !profile.followedByMe });
+        } catch {
+            // the button stays as it was
+        }
+    }
+
     async function handleLogout() {
         await logout();
         setAccessToken(null);
@@ -423,6 +439,11 @@ export default function ProfilePage() {
                             {profile.ongoingGameId !== null && (
                                 <Button variant="contained" onClick={() => navigate(`/game/${profile.ongoingGameId}`)}>
                                     {isOwnProfile ? "Back to your game" : "Watch"}
+                                </Button>
+                            )}
+                            {!isOwnProfile && profile.closedAt === null && (
+                                <Button variant="outlined" onClick={handleFollowToggle}>
+                                    {profile.followedByMe ? "Unfollow" : "Follow"}
                                 </Button>
                             )}
                             {isOwnProfile && (
