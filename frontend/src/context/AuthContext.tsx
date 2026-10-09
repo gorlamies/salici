@@ -45,7 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const token = await refresh();
         const user = await getUsername(token);
 
-        setAccessToken(token);
         setUsername(user);
       }
       catch {
@@ -59,81 +58,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     restoreSession();
   }, [refresh])
 
-  // Restore session on mount
-  useEffect(() => {
-    async function restoreSession() {
-      try {
-        const token = await refresh();
-        const user = await getUsername(token);
 
-        setAccessToken(token);
-        setUsername(user);
-      } catch {
-        setAccessToken(null);
-        setUsername(null);
-      } finally {
-        setIsAuthLoading(false);
-      }
-    }
-
-    restoreSession();
-  }, [refresh]);
 
   // SOCKET: manage the connection lifecycle
   useEffect(() => {
-    if (!accessToken) {
-      refreshAttempted.current = false;
-      socket.disconnect();
-      return;
-    }
-
-    let active = true;
-
-    function handleConnect() {
-      refreshAttempted.current = false;
-    }
 
     async function handleConnectError(error: Error) {
-      // Only attempt refresh for authentication errors.
-      // This code must match the NestJS gateway error.
+
       const authError = error as Error & {
-        data?: { code?: string };
+        data?: { status_code?: number };
       };
 
-      if (authError.data?.code !== "UNAUTHORIZED") {
+      // this blocks every error that is not due to auth
+      if (authError.data?.status_code !== 401) {
+        console.error("Socket connection error:", error);
         return;
       }
-
-      // Only one refresh attempt until a successful connection
-      if (refreshAttempted.current) {
-        return;
-      }
-
-      refreshAttempted.current = true;
 
       try {
         await refresh();
         // The accessToken effect will reconnect.
       } catch {
-        if (!active) return;
-
         setAccessToken(null);
         setUsername(null);
       }
     }
 
-    socket.on("connect", handleConnect);
-    socket.on("connect_error", handleConnectError);
+    if (!accessToken) {
+      socket.disconnect();
+      return;
+    }
 
     socket.auth = { token: accessToken };
+    socket.on("connect_error", handleConnectError);
 
     // Reconnect with current credentials
     socket.disconnect();
     socket.connect();
 
     return () => {
-      active = false;
-      socket.off("connect", handleConnect);
       socket.off("connect_error", handleConnectError);
       socket.disconnect();
     };
