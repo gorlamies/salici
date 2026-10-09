@@ -8,7 +8,7 @@ import GamePage from "./pages/GamePage"
 import AuthPage from "./pages/AuthPage"
 import ProfilePage from "./pages/ProfilePage"
 import Header from "./components/Header"
-import PersistentBoardLayer from "./components/PersistenBoardLayer";
+import PersistentBoardLayer from "./components/PersistentBoardLayer";
 
 
 function App() {
